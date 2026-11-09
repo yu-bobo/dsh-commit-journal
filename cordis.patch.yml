@@ -1,0 +1,4 @@
+# dsh-commit-journal bundle patch
+- insert:
+    - id: commit-journal
+      name: dsh-commit-journal
