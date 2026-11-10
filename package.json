@@ -1,6 +1,6 @@
 {
   "name": "dsh-commit-journal",
-  "version": "0.1.2",
+  "version": "0.1.7",
   "description": "DeepSeek Harness plugin: sync commits from Codeup (GitLab/GitHub later), query history, build day/week/month reports, and show an activity heatmap.",
   "type": "module",
   "license": "MIT",
@@ -58,7 +58,8 @@
       "inject": [
         "@deepseek-ai/dsh-client-locale",
         "@deepseek-ai/dsh-client-ui-layout",
-        "@deepseek-ai/dsh-client-ui-sidebar"
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-primitives"
       ]
     }
   },

@@ -36,18 +36,57 @@ dsh plugin --profile web add link:<本仓库路径>
 
 个人访问令牌至少：代码仓库、提交 → 只读。建议同时：代码组、分支 → 只读。改权限后请新建令牌。
 
+## Agent 能做什么
+
+插件把本机同步到的 Codeup 提交交给 Agent 工具调用。适合：
+
+- 写日报 / 周报 / 月报（按提交材料改写）
+- 查某段时间、某个仓库、某个关键词的提交
+- 看活跃热力、某天具体改了什么
+- 先同步再汇总（数据以本地缓存为准）
+
+面板负责配账号、关注仓库、看 UI；报告类能力主要走对话里的 tools（无「报告」页签）。
+
 ## Agent 工具
 
 | Tool | 说明 |
 |------|------|
-| `list_accounts` | 列账号 |
-| `upsert_account` / `remove_account` | 管理账号 |
-| `sync_commits` | 增量同步 |
-| `list_repos` | 仓库列表 |
-| `query_commits` | 查询提交 |
-| `get_period_report` | 日/周/月报 Markdown（对话用，无面板页） |
-| `get_activity_heatmap` | 热力数据 / 单日明细 |
-| `update_journal_settings` | 同步与导出设置 |
+| `list_accounts` | 列本地账号与当前活跃账号 |
+| `upsert_account` / `remove_account` | 创建、更新、删除账号（PAT 加密存本机） |
+| `sync_commits` | 增量同步关注仓库提交 |
+| `list_repos` | 仓库列表（可只列已有提交的） |
+| `query_commits` | 按日期 / 仓库 / 关键词查本地提交 |
+| `get_period_report` | 日 / 周 / 月 / 自定义区间 Markdown 材料（可落盘） |
+| `get_activity_heatmap` | 热力统计；传 `date` 可取单日明细 |
+| `update_journal_settings` | 同步间隔、回溯天数、导出目录等 |
+
+## 可直接对 Agent 说的提示词
+
+```text
+先 list_accounts，用当前账号 sync_commits，再给我昨天的工作日报（get_period_report kind=day）。
+```
+
+```text
+查本周我在各仓库的提交，按仓库分组总结做了什么（query_commits + 必要时 get_period_report kind=week）。
+```
+
+```text
+生成这个月的月报材料，标注法定工作日，Markdown 落盘（get_period_report kind=month, exportFile=true）。
+```
+
+```text
+看近一年活跃热力：总提交、活跃天数、最长连续；并列出提交最多的那天明细（get_activity_heatmap，再带 date）。
+```
+
+```text
+搜索关键词「修复」近 30 天的提交，列出仓库、时间和说明（query_commits）。
+```
+
+```text
+同步账号 xxx 的提交后，列出有提交记录的仓库（sync_commits → list_repos）。
+```
+
+建议流程：`list_accounts` →（缺数据则）`sync_commits` → `query_commits` / `get_period_report` / `get_activity_heatmap`。
 
 ## 数据目录
 

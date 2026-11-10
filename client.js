@@ -7,7 +7,32 @@ window.__ModuleLoader__.load({
   factory(require) {
     const React = require('react')
     const h = React.createElement
-    const { useCallback, useEffect, useMemo, useState } = React
+    const { useCallback, useEffect, useMemo, useRef, useState } = React
+    let ReactDOM = null
+    try { ReactDOM = require('react-dom') } catch { ReactDOM = null }
+
+    let ui = null
+    try { ui = require('@deepseek-ai/dsh-client-ui-primitives') } catch { ui = null }
+    const UiButton = ui && ui.Button
+    const UiModal = ui && ui.Modal
+    const UiInput = ui && ui.Input
+    const UiTag = ui && ui.Tag
+    const UiMenu = ui && ui.Menu
+    const IconPlus = ui && ui.IconPlusOutlineRegular
+    const IconRefresh = ui && ui.IconRefreshOutlineRegular
+    const IconEdit = ui && ui.IconEditOutlineRegular
+    const IconTrash = ui && ui.IconTrashOutlineRegular
+    const IconCheck = ui && ui.IconCheckOutlineRegular
+    const IconSearch = ui && ui.IconSearchOutlineRegular
+    const IconSave = ui && ui.IconSaveOutlineRegular
+    const IconClose = ui && ui.IconCloseOutlineRegular
+    const IconChevronLeft = ui && ui.IconChevronLeftOutlineRegular
+    const IconChevronRight = ui && ui.IconChevronRightOutlineRegular
+    const IconChevronDown = ui && ui.IconChevronDownOutlineRegular
+    const IconDownload = ui && ui.IconDownloadOutlineRegular
+    const IconGlobe = ui && ui.IconGlobeOutlineRegular
+    const IconLink = ui && (ui.IconRightUpOutlineRegular || ui.IconLinkOutlineRegular)
+    const UiSeg = ui && ui.SegmentedControl
 
     const PANEL_ID = 'commit-journal'
     const NS = 'commitJournal'
@@ -37,7 +62,9 @@ window.__ModuleLoader__.load({
         edit: 'Edit',
         remove: 'Delete',
         test: 'Test',
-        activate: 'Use',
+        activate: 'Switch to this',
+        currentAccount: 'Current account',
+        switchAccount: 'Switch account',
         active: 'Active',
         refresh: 'Refresh',
         sync: 'Sync',
@@ -46,12 +73,25 @@ window.__ModuleLoader__.load({
         query: 'Query',
         clearCommits: 'Reset local commits',
         clearLogs: 'Clear logs',
-        name: 'Name',
-        edition: 'Edition',
+        name: 'Display name',
+        namePh: 'e.g. Work account',
+        edition: 'Org type',
+        editionCentral: 'Central (public cloud)',
+        editionRegion: 'Region (dedicated / private)',
+        editionHint: 'Central: codeup.aliyun.com — fill organization ID. Region: your own instance domain.',
         org: 'Organization / API',
+        orgId: 'organizationId',
+        orgIdPh: 'Org ID from Yunxiao org admin → Basic info',
+        apiBase: 'API Base URL',
+        apiBasePh: 'e.g. https://xxx.devops.aliyuncs.com',
         authors: 'Author filters',
-        token: 'PAT',
-        defaultBranch: 'Default branch',
+        authorsHint: 'Email or name, comma-separated; empty = no filter',
+        authorsPh: 'you@example.com, Alice',
+        token: 'Personal access token',
+        tokenPh: 'Yunxiao → Personal settings → Personal access token',
+        tokenPhEdit: 'Leave blank to keep unchanged',
+        defaultBranch: 'Default sync branch',
+        defaultBranchPh: 'master / main / develop',
         watched: 'Watched',
         branch: 'Branch',
         time: 'Time',
@@ -60,10 +100,14 @@ window.__ModuleLoader__.load({
         author: 'Author',
         sha: 'SHA',
         level: 'Level',
+        levelInfo: 'Info',
+        levelWarn: 'Warn',
+        levelError: 'Error',
         message: 'Message',
         syncInterval: 'Sync interval (min)',
         lookback: 'Lookback days',
-        exportsPath: 'Exports path',
+        exportsPath: 'Exports folder',
+        exportsPathHint: 'Markdown dumps from sync / period reports. Empty = ~/.dsh-commit-journal/exports',
         recentYear: 'Past year',
         totalCommits: 'Commits',
         activeDays: 'Active days',
@@ -76,7 +120,51 @@ window.__ModuleLoader__.load({
         keyword: 'Keyword',
         from: 'From',
         to: 'To',
-        allRepos: 'All repos'
+        allRepos: 'All repos',
+        openRepo: 'Open',
+        repoKeyword: 'Search repos',
+        pageOf: 'Page',
+        pageSizeLabel: '/ page',
+        totalItems: '{n} total',
+        syncOk: 'Synced: +{n} commits ({f} fetched)',
+        syncPartial: 'Synced +{n}, {e} repo error(s)',
+        refreshOk: 'Repos refreshed',
+        saveWatchOk: 'Watched repos saved',
+        testOk: 'Connection OK',
+        activateOk: 'Account activated',
+        saveOk: 'Saved',
+        clearOk: 'Cleared',
+        queryOk: 'Updated',
+        currentStreak: 'Current streak',
+        avgPerDay: 'Avg / active day',
+        peakOn: 'Peak on',
+        weekdayDist: 'By weekday',
+        heatHint: 'Click a day with commits to open the side drawer.',
+        activityFootnote:
+          'Only locally synced commits are counted, bucketed by local calendar day. The first sync only looks back the days in Settings; earlier years may look sparse. For fuller history, raise lookback under Settings → Sync, reset local commits, then sync again.',
+        dayEmpty: 'No commits on this day.',
+        less: 'Less',
+        more: 'More',
+        noteTotal: 'All commits in range',
+        noteActiveDays: 'At least one commit',
+        noteStreak: 'Consecutive days with commits',
+        notePeak: 'No record yet',
+        unitDay: 'd',
+        unitCommit: '',
+        heatSummary: '{w} weeks · {a} active days · {c} commits',
+        dayLoading: 'Loading…',
+        dayCommits: '{n} commits',
+        filterAll: 'All',
+        filterWatched: 'Watched',
+        filterUnwatched: 'Unwatched',
+        descAccounts: 'Each account is one Codeup identity; the PAT is encrypted on this machine.',
+        descRepos:
+          '“Sync watched” pulls all watched repos; each row can sync alone. With nothing watched, full sync covers every visible repo.',
+        descCommits: 'Browse locally synced commits; filter by repo, date range, and keyword.',
+        descActivity: 'Contribution heatmap for the selected range.',
+        descLogs: 'Sync log for the current account; error rows show which repo failed.',
+        descSettings: 'Scheduled sync applies to every account. Lookback days apply on first sync, after reset, and once after you raise the window; otherwise sync is incremental.',
+        syncSettingsTitle: 'Sync'
       },
       zh: {
         panelLabel: '提交日志',
@@ -93,7 +181,9 @@ window.__ModuleLoader__.load({
         edit: '编辑',
         remove: '删除',
         test: '测试',
-        activate: '使用',
+        activate: '切换为当前',
+        currentAccount: '当前账号',
+        switchAccount: '切换账号',
         active: '当前',
         refresh: '刷新',
         sync: '同步',
@@ -102,12 +192,25 @@ window.__ModuleLoader__.load({
         query: '查询',
         clearCommits: '重置本地提交',
         clearLogs: '清除日志',
-        name: '名称',
-        edition: '版本',
+        name: '显示名称',
+        namePh: '例如：公司主账号',
+        edition: '组织类型',
+        editionCentral: '中心版（公共云）',
+        editionRegion: 'Region 版（专有云 / 独立实例）',
+        editionHint: '中心版走 codeup.aliyun.com，填组织 ID；Region 版填你的实例访问域名。',
         org: '组织 / 接入点',
+        orgId: 'organizationId',
+        orgIdPh: '组织管理后台 → 基本信息里的组织 ID',
+        apiBase: 'API Base URL',
+        apiBasePh: '实例访问域名，如 https://xxx.devops.aliyuncs.com',
         authors: '作者过滤',
+        authorsHint: '邮箱或姓名，逗号分隔；留空不过滤',
+        authorsPh: 'you@example.com, 张三',
         token: '个人访问令牌',
-        defaultBranch: '默认分支',
+        tokenPh: '云效个人设置 → 个人访问令牌',
+        tokenPhEdit: '留空则不修改',
+        defaultBranch: '默认同步分支',
+        defaultBranchPh: 'master / main / develop',
         watched: '关注',
         branch: '分支',
         time: '时间',
@@ -116,10 +219,14 @@ window.__ModuleLoader__.load({
         author: '作者',
         sha: 'SHA',
         level: '级别',
+        levelInfo: '信息',
+        levelWarn: '警告',
+        levelError: '错误',
         message: '内容',
         syncInterval: '同步间隔（分钟）',
         lookback: '回溯天数',
         exportsPath: '导出目录',
+        exportsPathHint: '同步按日落盘与周期报告 Markdown 的目录；留空默认 ~/.dsh-commit-journal/exports',
         recentYear: '近一年',
         totalCommits: '提交总数',
         activeDays: '活跃天数',
@@ -132,12 +239,63 @@ window.__ModuleLoader__.load({
         keyword: '关键词',
         from: '开始',
         to: '结束',
-        allRepos: '全部仓库'
+        allRepos: '全部仓库',
+        openRepo: '打开',
+        repoKeyword: '搜索仓库',
+        pageOf: '页',
+        pageSizeLabel: '条/页',
+        totalItems: '共 {n} 条',
+        syncOk: '同步完成：新增 {n} 条（拉取 {f}）',
+        syncPartial: '同步部分完成：新增 {n}，{e} 个仓库出错',
+        refreshOk: '仓库列表已刷新',
+        saveWatchOk: '关注列表已保存',
+        testOk: '连接测试通过',
+        activateOk: '已切换为当前账号',
+        saveOk: '已保存',
+        clearOk: '已清除',
+        queryOk: '已更新',
+        currentStreak: '当前连续',
+        avgPerDay: '活跃日均',
+        peakOn: '峰值日期',
+        weekdayDist: '星期分布',
+        heatHint: '点击有提交的日期，右侧抽屉查看当日明细。',
+        activityFootnote:
+          '仅统计本地已同步的提交，按本地时区自然日归档。首次同步只回溯设置中的天数，更早的历史年份可能偏少；需要更完整的历史可在「设置 → 同步」调大回溯天数后重置记录再同步。',
+        dayEmpty: '当天没有提交记录',
+        less: '少',
+        more: '多',
+        noteTotal: '所选区间内全部提交',
+        noteActiveDays: '至少有一次提交',
+        noteStreak: '连续每天都有提交',
+        notePeak: '暂无记录',
+        unitDay: '天',
+        unitCommit: '条',
+        heatSummary: '共 {w} 周 · 活跃 {a} 天 · 合计 {c} 条',
+        dayLoading: '加载中',
+        dayCommits: '{n} 条提交',
+        filterAll: '全部',
+        filterWatched: '已关注',
+        filterUnwatched: '未关注',
+        descAccounts: '每个账号对应一套云效身份；令牌加密保存在本地。',
+        descRepos:
+          '「同步关注」拉取全部关注仓；单行可单独同步。未关注任何仓库时全量同步会覆盖全部可见仓。',
+        descCommits: '查询本地已同步的提交记录；可按仓库、日期与关键词筛选。',
+        descActivity: '近一年 / 指定年份的提交活跃度。',
+        descLogs: '当前账号同步记录；错误行可查看具体仓库失败原因。',
+        descSettings:
+          '定时同步对所有账号生效。回溯天数用于首次同步、重置记录后，以及调大该值后的下一次同步（会按新窗口回填一次历史）；其余时间按上次同步时间增量拉取。',
+        syncSettingsTitle: '同步'
       }
     }
 
     const CSS = `
       .dsh-cj-root {
+        --dsh-cj-heat-0: #ebedf0;
+        --dsh-cj-heat-1: #9be9a8;
+        --dsh-cj-heat-2: #40c463;
+        --dsh-cj-heat-3: #30a14e;
+        --dsh-cj-heat-4: #216e39;
+        position: relative;
         box-sizing: border-box;
         height: 100%;
         display: flex;
@@ -146,6 +304,25 @@ window.__ModuleLoader__.load({
         color: var(--dsw-alias-label-primary);
         font-size: 13px;
         line-height: 1.45;
+        overflow: hidden;
+      }
+      .dsh-cj-root[data-scheme="dark"],
+      :root[data-theme="dark"] .dsh-cj-root,
+      :root[data-color-scheme="dark"] .dsh-cj-root {
+        --dsh-cj-heat-0: #161b22;
+        --dsh-cj-heat-1: #0e4429;
+        --dsh-cj-heat-2: #006d32;
+        --dsh-cj-heat-3: #26a641;
+        --dsh-cj-heat-4: #39d353;
+      }
+      @media (prefers-color-scheme: dark) {
+        .dsh-cj-root:not([data-scheme="light"]) {
+          --dsh-cj-heat-0: #161b22;
+          --dsh-cj-heat-1: #0e4429;
+          --dsh-cj-heat-2: #006d32;
+          --dsh-cj-heat-3: #26a641;
+          --dsh-cj-heat-4: #39d353;
+        }
       }
       .dsh-cj-root *, .dsh-cj-root *::before, .dsh-cj-root *::after { box-sizing: border-box; }
       .dsh-cj-tabs {
@@ -175,8 +352,31 @@ window.__ModuleLoader__.load({
       .dsh-cj-body {
         flex: 1;
         min-height: 0;
+        overflow: hidden;
+        padding: 16px 20px 16px;
+        display: flex;
+        flex-direction: column;
+      }
+      /* Table pages: fill remaining height; table scrolls; pager stays put */
+      .dsh-cj-page-fill {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .dsh-cj-page-fill > .dsh-cj-page-head,
+      .dsh-cj-page-fill > .dsh-cj-row,
+      .dsh-cj-page-fill > .dsh-cj-pager,
+      .dsh-cj-page-fill > .dsh-cj-muted,
+      .dsh-cj-page-fill > .dsh-cj-error {
+        flex-shrink: 0;
+      }
+      /* Non-table pages keep a single scroll area */
+      .dsh-cj-page-scroll {
+        flex: 1;
+        min-height: 0;
         overflow: auto;
-        padding: 16px 20px 24px;
       }
       .dsh-cj-row {
         display: flex;
@@ -186,16 +386,41 @@ window.__ModuleLoader__.load({
         margin-bottom: 12px;
       }
       .dsh-cj-row-end { justify-content: space-between; }
-      .dsh-cj-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+      .dsh-cj-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+      /* Size only — do not override official Button primary/outline colors */
+      .dsh-cj-btn-sized {
+        box-sizing: border-box !important;
+        height: 32px !important;
+        min-height: 32px !important;
+        max-height: 32px !important;
+        padding: 0 12px !important;
+        font-size: 12px !important;
+        line-height: 18px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        white-space: nowrap;
+        vertical-align: middle;
+      }
       .dsh-cj-btn {
         appearance: none;
+        box-sizing: border-box;
+        height: 32px;
+        min-height: 32px;
+        padding: 0 12px;
+        margin: 0;
         border: 1px solid var(--dsw-alias-border-l1);
         background: var(--dsw-alias-bg-layer-1);
         color: var(--dsw-alias-label-primary);
-        border-radius: 8px;
-        padding: 7px 12px;
+        border-radius: var(--dsw-radius-sm, 8px);
         font-size: 12px;
+        line-height: 18px;
         cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        white-space: nowrap;
+        vertical-align: middle;
       }
       .dsh-cj-btn:disabled { opacity: .45; cursor: not-allowed; }
       .dsh-cj-btn[data-primary="1"] {
@@ -207,25 +432,134 @@ window.__ModuleLoader__.load({
         color: var(--dsw-alias-state-error-primary);
         border-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 35%, transparent);
       }
-      .dsh-cj-input, .dsh-cj-select, .dsh-cj-textarea {
+      .dsh-cj-btn-danger {
+        color: var(--dsw-alias-state-error-primary) !important;
+      }
+      .dsh-cj-input, .dsh-cj-select {
+        box-sizing: border-box;
+        height: 32px;
+        min-height: 32px;
         border: 1px solid var(--dsw-alias-border-l1);
         background: var(--dsw-alias-bg-layer-1);
         color: var(--dsw-alias-label-primary);
-        border-radius: 8px;
-        padding: 7px 10px;
+        border-radius: var(--dsw-radius-sm, 8px);
+        padding: 0 10px;
         font-size: 12px;
+        line-height: 18px;
+        min-width: 0;
+        vertical-align: middle;
+      }
+      .dsh-cj-select-trigger {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        width: auto;
+        max-width: 100%;
         min-width: 0;
       }
-      .dsh-cj-textarea { width: 100%; min-height: 72px; resize: vertical; }
+      .dsh-cj-select-trigger .dsh-cj-select-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+        flex: 1;
+        text-align: left;
+      }
+      .dsh-cj-select-trigger .dsh-cj-select-caret {
+        flex-shrink: 0;
+        opacity: 0.7;
+        font-size: 11px;
+        line-height: 1;
+      }
+      .dsh-cj-select-menu {
+        position: fixed;
+        z-index: 60;
+        max-height: min(280px, 50vh);
+        overflow: auto;
+        padding: 4px;
+        border-radius: var(--dsw-radius-sm, 8px);
+        border: 1px solid var(--dsw-alias-border-l1);
+        background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1));
+        box-shadow: var(--dsw-elevation-prominent, 0 8px 24px rgba(0,0,0,.18));
+      }
+      .dsh-cj-select-option {
+        appearance: none;
+        display: block;
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: var(--dsw-alias-label-primary);
+        text-align: left;
+        border-radius: 6px;
+        padding: 7px 10px;
+        font-size: 12px;
+        line-height: 18px;
+        cursor: pointer;
+      }
+      .dsh-cj-select-option:hover,
+      .dsh-cj-select-option[data-active="1"] {
+        background: var(--dsw-alias-bg-layer-1);
+      }
+      .dsh-cj-select-option[data-selected="1"] {
+        color: var(--dsw-alias-brand-primary);
+        font-weight: 600;
+      }
+      .dsh-cj-select-option:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .dsh-cj-textarea {
+        border: 1px solid var(--dsw-alias-border-l1);
+        background: var(--dsw-alias-bg-layer-1);
+        color: var(--dsw-alias-label-primary);
+        border-radius: var(--dsw-radius-sm, 8px);
+        padding: 8px 10px;
+        font-size: 12px;
+        width: 100%;
+        min-height: 72px;
+        resize: vertical;
+      }
+      /* Official Input wrapper also lands at 32px */
+      .dsh-cj-row > span,
+      .dsh-cj-field > span {
+        vertical-align: middle;
+      }
       .dsh-cj-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
       .dsh-cj-label { color: var(--dsw-alias-label-secondary); font-size: 12px; }
       .dsh-cj-muted { color: var(--dsw-alias-label-secondary); font-size: 12px; }
+      .dsh-cj-page-head { margin-bottom: 14px; }
+      .dsh-cj-page-title {
+        margin: 0 0 6px;
+        font-size: 16px;
+        font-weight: 650;
+        color: var(--dsw-alias-label-primary);
+      }
+      .dsh-cj-page-desc {
+        margin: 0;
+        color: var(--dsw-alias-label-secondary);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .dsh-cj-footnote {
+        margin: 12px 0 0;
+        color: var(--dsw-alias-label-secondary);
+        font-size: 12px;
+        line-height: 1.55;
+      }
       .dsh-cj-error { color: var(--dsw-alias-state-error-primary); font-size: 12px; margin: 0 0 10px; }
       .dsh-cj-table-wrap {
+        flex: 1;
+        min-height: 0;
         border: 1px solid var(--dsw-alias-border-l1);
         border-radius: 12px;
         overflow: auto;
         background: var(--dsw-alias-bg-layer-1);
+      }
+      .dsh-cj-page-scroll > .dsh-cj-table-wrap {
+        flex: initial;
+        min-height: auto;
+        max-height: none;
       }
       .dsh-cj-table { width: 100%; border-collapse: collapse; }
       .dsh-cj-table th, .dsh-cj-table td {
@@ -242,95 +576,446 @@ window.__ModuleLoader__.load({
         top: 0;
       }
       .dsh-cj-table tr:last-child td { border-bottom: 0; }
-      .dsh-cj-badge {
+      /* Fallback Tag tones (match official Tag.module.css) */
+      .dsh-cj-tag {
         display: inline-flex;
         align-items: center;
-        padding: 2px 8px;
         border-radius: 999px;
+        padding: 1px 8px;
         font-size: 11px;
-        background: color-mix(in srgb, var(--dsw-alias-brand-primary) 16%, transparent);
-        color: var(--dsw-alias-brand-primary);
+        line-height: 17px;
+        font-weight: 500;
+        white-space: nowrap;
       }
+      .dsh-cj-tag[data-tone="outline"] {
+        border: 0.5px solid var(--dsw-alias-border-l4, var(--dsw-alias-border-l1));
+        color: var(--dsw-alias-label-tertiary, var(--dsw-alias-label-secondary));
+      }
+      .dsh-cj-tag[data-tone="solid"] {
+        background: var(--dsw-alias-label-primary);
+        color: var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-layer-1));
+      }
+      .dsh-cj-tag[data-tone="neutral"] {
+        background: var(--dsw-alias-bg-module-platform, var(--dsw-alias-bg-layer-2));
+        color: var(--dsw-alias-label-secondary);
+      }
+      .dsh-cj-tag[data-tone="success"] {
+        background: color-mix(in srgb, var(--dsw-alias-state-success-primary, #16a34a) 10%, transparent);
+        color: var(--dsw-alias-state-success-primary, #16a34a);
+      }
+      .dsh-cj-tag[data-tone="info"] {
+        background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #2563eb) 10%, transparent);
+        color: var(--dsw-alias-state-business-primary, #2563eb);
+      }
+      .dsh-cj-tag[data-tone="warning"] {
+        background: color-mix(in srgb, var(--dsw-alias-state-warn-primary, #d97706) 12%, transparent);
+        color: var(--dsw-alias-state-warn-primary, #d97706);
+      }
+      .dsh-cj-tag[data-tone="danger"] {
+        background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, transparent);
+        color: var(--dsw-alias-state-error-primary);
+      }
+      /* Fallback modal: paint below native caption so top-right DSH controls stay usable */
       .dsh-cj-modal-mask {
-        position: fixed; inset: 0; background: color-mix(in srgb, #000 40%, transparent);
-        display: flex; align-items: center; justify-content: center; z-index: 40; padding: 20px;
+        position: fixed;
+        inset: var(--dsh-frame-chrome-top, 0px) 0 0;
+        background: var(--dsw-alias-bg-mask-1, color-mix(in srgb, #000 40%, transparent));
+        display: flex; align-items: center; justify-content: center; z-index: 40;
+        padding: max(24px, var(--dsh-frame-overlay-top, 24px)) 24px;
       }
       .dsh-cj-modal {
         width: min(480px, 100%);
-        background: var(--dsw-alias-bg-layer-1);
+        background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1));
         border: 1px solid var(--dsw-alias-border-l1);
-        border-radius: 14px;
+        border-radius: var(--dsw-radius-panel, 14px);
         padding: 16px;
-        max-height: 90vh;
+        max-height: 100%;
         overflow: auto;
+        box-shadow: var(--dsw-elevation-prominent, none);
       }
       .dsh-cj-modal h3 { margin: 0 0 12px; font-size: 15px; }
       .dsh-cj-stats {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 10px;
-        margin-bottom: 16px;
+        margin: 4px 0 16px;
       }
       .dsh-cj-stat {
+        position: relative;
+        overflow: hidden;
         background: var(--dsw-alias-bg-layer-1);
         border: 1px solid var(--dsw-alias-border-l1);
         border-radius: 12px;
-        padding: 12px;
+        padding: 12px 14px 13px;
       }
-      .dsh-cj-stat .l { color: var(--dsw-alias-label-secondary); font-size: 12px; }
-      .dsh-cj-stat .v { margin-top: 6px; font-size: 20px; font-weight: 650; }
+      .dsh-cj-stat .l {
+        position: relative;
+        z-index: 1;
+        color: var(--dsw-alias-label-secondary);
+        font-size: 12px;
+        letter-spacing: 0.04em;
+      }
+      .dsh-cj-stat .v {
+        position: relative;
+        z-index: 1;
+        margin-top: 4px;
+        font-size: 26px;
+        font-weight: 700;
+        line-height: 1.2;
+        color: var(--dsh-cj-heat-3);
+        font-variant-numeric: tabular-nums;
+      }
+      .dsh-cj-stat .v small {
+        margin-left: 4px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--dsw-alias-label-secondary);
+      }
+      .dsh-cj-stat .n {
+        position: relative;
+        z-index: 1;
+        margin-top: 3px;
+        font-size: 12px;
+        color: var(--dsw-alias-label-secondary);
+        min-height: 16px;
+      }
       .dsh-cj-heat {
         background: var(--dsw-alias-bg-layer-1);
         border: 1px solid var(--dsw-alias-border-l1);
         border-radius: 12px;
-        padding: 14px;
-        overflow-x: auto;
+        padding: 14px 16px 12px;
+        overflow-x: hidden;
+        container-type: inline-size;
       }
-      .dsh-cj-heat-body { display: grid; grid-template-columns: 18px 1fr; gap: 8px; }
-      .dsh-cj-weekdays {
-        display: grid; grid-template-rows: repeat(7, 11px); gap: 3px; padding-top: 16px;
-        color: var(--dsw-alias-label-secondary); font-size: 10px;
+      .dsh-cj-heat-body {
+        --dsh-cj-cell: clamp(9px, calc((100cqw - 48px) / 53), 13px);
+        --dsh-cj-gap: 3px;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        width: 100%;
       }
+      .dsh-cj-heat-main { min-width: 0; }
       .dsh-cj-months {
-        display: grid; grid-auto-flow: column; grid-auto-columns: 14px; gap: 3px;
-        height: 14px; margin-bottom: 2px; color: var(--dsw-alias-label-secondary); font-size: 11px;
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: calc(var(--dsh-cj-cell) + var(--dsh-cj-gap));
+        height: 16px;
+        margin-bottom: 4px;
+        color: var(--dsw-alias-label-secondary);
+        font-size: 11px;
+        line-height: 16px;
+        user-select: none;
+      }
+      .dsh-cj-months .dsh-cj-month {
+        white-space: nowrap;
+      }
+      .dsh-cj-weekdays {
+        display: grid;
+        grid-template-rows: repeat(7, var(--dsh-cj-cell));
+        gap: var(--dsh-cj-gap);
+        padding-top: 20px;
+        color: var(--dsw-alias-label-secondary);
+        font-size: 10px;
+        line-height: var(--dsh-cj-cell);
+        user-select: none;
+        width: 14px;
+        flex: none;
+      }
+      .dsh-cj-weekdays span {
+        height: var(--dsh-cj-cell);
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
       }
       .dsh-cj-grid {
-        display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 11px);
-        grid-auto-columns: 11px; gap: 3px;
+        display: grid;
+        grid-auto-flow: column;
+        grid-template-rows: repeat(7, var(--dsh-cj-cell));
+        grid-auto-columns: var(--dsh-cj-cell);
+        gap: var(--dsh-cj-gap);
       }
       .dsh-cj-cell {
-        width: 11px; height: 11px; border-radius: 2px; border: 0; padding: 0;
-        background: color-mix(in srgb, var(--dsw-alias-label-secondary) 18%, transparent);
+        width: var(--dsh-cj-cell);
+        height: var(--dsh-cj-cell);
+        border-radius: max(3px, calc(var(--dsh-cj-cell) * 0.2));
+        border: 0;
+        padding: 0;
+        background: var(--dsh-cj-heat-0);
       }
-      .dsh-cj-cell.lv1 { background: color-mix(in srgb, var(--dsw-alias-brand-primary) 28%, transparent); }
-      .dsh-cj-cell.lv2 { background: color-mix(in srgb, var(--dsw-alias-brand-primary) 48%, transparent); }
-      .dsh-cj-cell.lv3 { background: color-mix(in srgb, var(--dsw-alias-brand-primary) 72%, transparent); }
-      .dsh-cj-cell.lv4 { background: var(--dsw-alias-brand-primary); }
-      .dsh-cj-cell.is-blank { opacity: .2; }
+      .dsh-cj-cell.lv1 { background: var(--dsh-cj-heat-1); }
+      .dsh-cj-cell.lv2 { background: var(--dsh-cj-heat-2); }
+      .dsh-cj-cell.lv3 { background: var(--dsh-cj-heat-3); }
+      .dsh-cj-cell.lv4 { background: var(--dsh-cj-heat-4); }
+      .dsh-cj-cell.is-blank {
+        opacity: .45;
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-border-l1) 80%, transparent);
+      }
       .dsh-cj-cell.has-commits { cursor: pointer; }
-      .dsh-cj-cell.is-today { outline: 1px solid var(--dsw-alias-brand-primary); }
-      .dsh-cj-drawer {
+      .dsh-cj-cell.has-commits:hover {
+        transform: scale(1.2);
+        position: relative;
+        z-index: 2;
+      }
+      .dsh-cj-cell.is-today { outline: 1px solid var(--dsh-cj-heat-3); outline-offset: 1px; }
+      .dsh-cj-heat-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
         margin-top: 14px;
-        border-top: 1px solid var(--dsw-alias-border-l1);
-        padding-top: 12px;
+        font-size: 12px;
+        color: var(--dsw-alias-label-secondary);
+      }
+      .dsh-cj-heat-legend {
+        display: flex; align-items: center; gap: 5px;
+      }
+      .dsh-cj-heat-legend .swatch {
+        width: 12px; height: 12px; border-radius: 3px; display: inline-block;
+        background: var(--dsh-cj-heat-0);
+      }
+      .dsh-cj-heat-legend .swatch.lv1 { background: var(--dsh-cj-heat-1); }
+      .dsh-cj-heat-legend .swatch.lv2 { background: var(--dsh-cj-heat-2); }
+      .dsh-cj-heat-legend .swatch.lv3 { background: var(--dsh-cj-heat-3); }
+      .dsh-cj-heat-legend .swatch.lv4 { background: var(--dsh-cj-heat-4); }
+      .dsh-cj-insights {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+      }
+      .dsh-cj-insight {
+        background: var(--dsw-alias-bg-layer-1);
+        border: 1px solid var(--dsw-alias-border-l1);
+        border-radius: 12px;
+        padding: 12px 14px;
+      }
+      .dsh-cj-insight h4 {
+        margin: 0 0 10px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--dsw-alias-label-secondary);
+      }
+      .dsh-cj-wd {
+        display: grid;
+        grid-template-columns: 18px 1fr 28px;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 6px;
+        font-size: 11px;
+        color: var(--dsw-alias-label-secondary);
+      }
+      .dsh-cj-wd:last-child { margin-bottom: 0; }
+      .dsh-cj-wd-bar {
+        height: 6px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--dsw-alias-border-l1) 70%, transparent);
+        overflow: hidden;
+      }
+      .dsh-cj-wd-bar > i {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: var(--dsh-cj-heat-3);
+      }
+      .dsh-cj-meta-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 12px;
+      }
+      .dsh-cj-meta-list div { display: flex; justify-content: space-between; gap: 12px; }
+      .dsh-cj-meta-list strong { color: var(--dsw-alias-label-primary); font-weight: 600; }
+      @media (max-width: 720px) {
+        .dsh-cj-insights { grid-template-columns: 1fr; }
+      }
+      .dsh-cj-drawer {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 20;
+        width: min(400px, 94%);
+        display: flex;
+        flex-direction: column;
+        background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1));
+        border-left: 1px solid var(--dsw-alias-border-l1);
+        box-shadow: var(--dsw-elevation-prominent, none);
+        padding: 14px 16px 16px;
+      }
+      .dsh-cj-drawer-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-shrink: 0;
+      }
+      .dsh-cj-drawer-body {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+      }
+      .dsh-cj-drawer-title {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+      .dsh-cj-drawer-title strong { font-size: 15px; font-weight: 600; }
+      .dsh-cj-drawer-title span {
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--dsw-alias-label-secondary);
       }
       .dsh-cj-commit {
-        padding: 10px 0;
-        border-bottom: 1px solid var(--dsw-alias-border-l1);
+        padding: 11px 13px 12px;
+        margin-bottom: 10px;
+        border-radius: 12px;
+        border: 1px solid var(--dsw-alias-border-l1);
+        background: var(--dsw-alias-bg-layer-1);
       }
-      .dsh-cj-commit:last-child { border-bottom: 0; }
+      .dsh-cj-commit:last-child { margin-bottom: 0; }
+      .dsh-cj-commit-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 12px;
+        color: var(--dsw-alias-label-secondary);
+      }
+      .dsh-cj-commit-repo {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .dsh-cj-commit-title {
+        margin-top: 5px;
+        font-size: 13px;
+        line-height: 1.55;
+        word-break: break-word;
+      }
+      .dsh-cj-commit-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 6px;
+        font-size: 12px;
+        color: var(--dsw-alias-label-secondary);
+      }
+      .dsh-cj-commit-sha {
+        padding: 1px 6px;
+        border-radius: 5px;
+        border: 1px solid var(--dsw-alias-border-l1);
+        background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1));
+        font-size: 11px;
+      }
       .dsh-cj-pager {
-        display: flex; justify-content: flex-end; gap: 8px; align-items: center; margin-top: 12px;
+        flex-shrink: 0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 6px;
+        align-items: center;
+        margin-top: 4px;
+        padding: 12px 0 2px;
+        border-top: 1px solid var(--dsw-alias-border-l1);
+      }
+      .dsh-cj-pager-info {
+        margin-right: auto;
+        color: var(--dsw-alias-label-secondary);
+        font-size: 12px;
+      }
+      .dsh-cj-pager-size {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--dsw-alias-label-secondary);
+        font-size: 12px;
+      }
+      .dsh-cj-pager-size .dsh-cj-select-trigger {
+        min-width: 72px;
       }
       .dsh-cj-link {
         color: var(--dsw-alias-brand-primary);
         text-decoration: none;
       }
+      .dsh-cj-notice {
+        flex-shrink: 0;
+        z-index: 5;
+        margin: 0 0 12px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        font-size: 12px;
+        line-height: 1.4;
+        background: var(--dsw-alias-bg-layer-1);
+        border: 1px solid var(--dsw-alias-border-l1);
+        color: var(--dsw-alias-label-primary);
+        box-shadow: var(--dsw-elevation-subtle, none);
+      }
+      .dsh-cj-notice[data-tone="success"] {
+        background: color-mix(in srgb, var(--dsh-cj-heat-2) 18%, var(--dsw-alias-bg-layer-1));
+        border-color: color-mix(in srgb, var(--dsh-cj-heat-3) 35%, var(--dsw-alias-border-l1));
+        color: var(--dsw-alias-label-primary);
+      }
+      .dsh-cj-root[data-scheme="dark"] .dsh-cj-notice[data-tone="success"] {
+        background: color-mix(in srgb, var(--dsh-cj-heat-3) 22%, var(--dsw-alias-bg-layer-1));
+      }
+      .dsh-cj-notice[data-tone="error"] {
+        background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, var(--dsw-alias-bg-layer-1));
+        border-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 35%, var(--dsw-alias-border-l1));
+        color: var(--dsw-alias-state-error-primary);
+      }
+      .dsh-cj-seg {
+        display: inline-flex;
+        gap: 2px;
+        padding: 2px;
+        border-radius: 8px;
+        background: var(--dsw-alias-bg-layer-2);
+        border: 1px solid var(--dsw-alias-border-l1);
+      }
+      .dsh-cj-seg button {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        color: var(--dsw-alias-label-secondary);
+        border-radius: 6px;
+        padding: 5px 10px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .dsh-cj-seg button[data-active="1"] {
+        background: var(--dsw-alias-bg-layer-1);
+        color: var(--dsw-alias-label-primary);
+        font-weight: 600;
+        box-shadow: var(--dsw-elevation-subtle, none);
+      }
       @media (max-width: 720px) {
         .dsh-cj-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
     `
+
+    // Strip Codeup 24-char org id prefix from path_with_namespace for UI labels
+    function shortRepoLabel(path) {
+      const raw = String(path || '').trim()
+      if (!raw) return ''
+      const parts = raw.split('/').filter(Boolean)
+      if (parts.length <= 1) return raw
+      if (/^[a-f0-9]{24}$/i.test(parts[0])) return parts.slice(1).join('/') || raw
+      return raw
+    }
+
+    function fillMsg(tpl, vars) {
+      return String(tpl || '').replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''))
+    }
+
+    function syncToastText(t, result) {
+      const inserted = result && result.inserted != null ? result.inserted : 0
+      const fetched = result && result.fetched != null ? result.fetched : 0
+      const errN = result && result.errors ? result.errors.length : 0
+      if (errN) return fillMsg(t('syncPartial'), { n: inserted, e: errN })
+      return fillMsg(t('syncOk'), { n: inserted, f: fetched })
+    }
 
     async function api(path, options) {
       const res = await fetch(API + path, {
@@ -344,15 +1029,368 @@ window.__ModuleLoader__.load({
       return data
     }
 
+    function PageHead({ desc }) {
+      if (!desc) return null
+      return h('div', { className: 'dsh-cj-page-head' },
+        h('p', { className: 'dsh-cj-page-desc' }, desc)
+      )
+    }
+
+    const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
+
+    function StatusTag({ tone, children }) {
+      if (UiTag) return h(UiTag, { tone: tone || 'outline' }, children)
+      return h('span', { className: 'dsh-cj-tag', 'data-tone': tone || 'outline' }, children)
+    }
+
+    /**
+     * 自定义下拉：弹出层挂到 portal / fixed，避免原生 select 撑出 App 容器
+     */
+    function SelectField({
+      value,
+      options,
+      onChange,
+      disabled,
+      style,
+      className,
+      placeholder,
+      onOpen,
+      'aria-label': ariaLabel,
+      title
+    }) {
+      const [open, setOpen] = useState(false)
+      const anchorRef = useRef(null)
+      const menuRef = useRef(null)
+      const [menuStyle, setMenuStyle] = useState(null)
+      const list = options || []
+      const selected = list.find((o) => String(o.value) === String(value))
+      const label = selected ? selected.label : (placeholder || '')
+
+      const close = useCallback(() => setOpen(false), [])
+
+      const openMenu = useCallback(() => {
+        if (disabled) return
+        setOpen(true)
+        if (onOpen) onOpen()
+      }, [disabled, onOpen])
+
+      const pick = useCallback((next) => {
+        onChange(next)
+        setOpen(false)
+      }, [onChange])
+
+      useEffect(() => {
+        if (!open || UiMenu) return undefined
+        const place = () => {
+          const el = anchorRef.current
+          if (!el) return
+          const root = el.closest('.dsh-cj-root') || document.body
+          const a = el.getBoundingClientRect()
+          const bound = root.getBoundingClientRect()
+          const width = Math.max(a.width, 120)
+          const maxH = Math.min(280, Math.max(120, bound.height - 16))
+          let left = Math.min(Math.max(a.left, bound.left + 8), bound.right - width - 8)
+          let top = a.bottom + 4
+          if (top + Math.min(maxH, list.length * 32 + 12) > bound.bottom - 8) {
+            top = Math.max(bound.top + 8, a.top - 4 - Math.min(maxH, list.length * 32 + 12))
+          }
+          setMenuStyle({
+            left: Math.round(left) + 'px',
+            top: Math.round(top) + 'px',
+            width: Math.round(width) + 'px',
+            maxHeight: Math.round(maxH) + 'px'
+          })
+        }
+        place()
+        const onDoc = (e) => {
+          const t = e.target
+          if (anchorRef.current && anchorRef.current.contains(t)) return
+          if (menuRef.current && menuRef.current.contains(t)) return
+          close()
+        }
+        const onKey = (e) => { if (e.key === 'Escape') close() }
+        window.addEventListener('resize', place)
+        window.addEventListener('scroll', place, true)
+        document.addEventListener('mousedown', onDoc, true)
+        document.addEventListener('keydown', onKey, true)
+        return () => {
+          window.removeEventListener('resize', place)
+          window.removeEventListener('scroll', place, true)
+          document.removeEventListener('mousedown', onDoc, true)
+          document.removeEventListener('keydown', onKey, true)
+        }
+      }, [close, list.length, open])
+
+      const trigger = h('button', {
+        ref: anchorRef,
+        type: 'button',
+        className: ['dsh-cj-btn', 'dsh-cj-btn-sized', 'dsh-cj-select-trigger', className].filter(Boolean).join(' '),
+        style,
+        disabled: !!disabled,
+        title: title || ariaLabel || undefined,
+        'aria-label': ariaLabel,
+        'aria-expanded': open ? 'true' : 'false',
+        'aria-haspopup': 'listbox',
+        onClick: () => { if (open) close(); else openMenu() }
+      },
+        h('span', { className: 'dsh-cj-select-label' }, label || '—'),
+        h('span', { className: 'dsh-cj-select-caret', 'aria-hidden': true },
+          IconChevronDown ? h(IconChevronDown) : '▾'
+        )
+      )
+
+      if (UiMenu) {
+        const emptyId = '__dsh_cj_empty__'
+        const toId = (v) => (v == null || v === '' ? emptyId : String(v))
+        const fromId = (id) => {
+          if (id === emptyId) {
+            const hit = list.find((o) => o.value == null || o.value === '')
+            return hit ? hit.value : ''
+          }
+          const hit = list.find((o) => String(o.value) === id)
+          return hit ? hit.value : id
+        }
+        return h(UiMenu, {
+          open,
+          onClose: close,
+          portal: true,
+          minWidthFromAnchor: true,
+          dense: true,
+          compact: true,
+          selection: 'check',
+          selectedId: toId(value),
+          items: list.map((o) => ({
+            id: toId(o.value),
+            label: o.label,
+            disabled: !!o.disabled
+          })),
+          onSelect: (id) => { pick(fromId(id)) },
+          anchor: h('span', {
+            ref: anchorRef,
+            style: { display: 'inline-flex', maxWidth: '100%' },
+            onClick: (e) => {
+              if (disabled) return
+              e.preventDefault()
+              if (open) close()
+              else openMenu()
+            }
+          },
+            h('button', {
+              type: 'button',
+              className: ['dsh-cj-btn', 'dsh-cj-btn-sized', 'dsh-cj-select-trigger', className].filter(Boolean).join(' '),
+              style,
+              disabled: !!disabled,
+              title: title || ariaLabel || undefined,
+              'aria-label': ariaLabel,
+              'aria-expanded': open ? 'true' : 'false',
+              'aria-haspopup': 'listbox'
+            },
+              h('span', { className: 'dsh-cj-select-label' }, label || '—'),
+              h('span', { className: 'dsh-cj-select-caret', 'aria-hidden': true },
+                IconChevronDown ? h(IconChevronDown) : '▾'
+              )
+            )
+          )
+        })
+      }
+
+      const menu = open && menuStyle
+        ? h('div', {
+            ref: menuRef,
+            className: 'dsh-cj-select-menu',
+            role: 'listbox',
+            style: menuStyle
+          },
+            list.map((o) =>
+              h('button', {
+                key: String(o.value),
+                type: 'button',
+                role: 'option',
+                className: 'dsh-cj-select-option',
+                disabled: !!o.disabled,
+                'data-selected': String(o.value) === String(value) ? '1' : '0',
+                'aria-selected': String(o.value) === String(value),
+                onClick: () => pick(o.value)
+              }, o.label)
+            )
+          )
+        : null
+
+      return h(React.Fragment, null,
+        trigger,
+        menu && ReactDOM && ReactDOM.createPortal
+          ? ReactDOM.createPortal(menu, document.body)
+          : menu
+      )
+    }
+
+    /**
+     * 表格底部分页：总数、每页条数、左右翻页
+     */
+    function TablePager({ t, total, page, pageSize, busy, onPageChange, onPageSizeChange }) {
+      const totalPages = Math.max(1, Math.ceil((total || 0) / pageSize))
+      const safePage = Math.min(Math.max(1, page || 1), totalPages)
+      return h('div', { className: 'dsh-cj-pager' },
+        h('span', { className: 'dsh-cj-pager-info' },
+          fillMsg(t('totalItems'), { n: total || 0 }) + ' · ' + safePage + ' / ' + totalPages
+        ),
+        h('label', { className: 'dsh-cj-pager-size' },
+          h(SelectField, {
+            value: pageSize,
+            disabled: busy,
+            'aria-label': t('pageSizeLabel'),
+            style: { minWidth: 72 },
+            options: PAGE_SIZE_OPTIONS.map((n) => ({ value: n, label: String(n) })),
+            onChange: (n) => onPageSizeChange(Number(n))
+          }),
+          h('span', null, t('pageSizeLabel'))
+        ),
+        h(Btn, {
+          disabled: busy || safePage <= 1,
+          icon: IconChevronLeft ? h(IconChevronLeft) : null,
+          onClick: () => onPageChange(safePage - 1)
+        }, IconChevronLeft ? null : '‹'),
+        h(Btn, {
+          disabled: busy || safePage >= totalPages,
+          icon: IconChevronRight ? h(IconChevronRight) : null,
+          onClick: () => onPageChange(safePage + 1)
+        }, IconChevronRight ? null : '›')
+      )
+    }
+
+    function logLevelTag(t, level) {
+      const key = String(level || '').toLowerCase()
+      if (key === 'error') return h(StatusTag, { tone: 'danger' }, t('levelError'))
+      if (key === 'warn' || key === 'warning') return h(StatusTag, { tone: 'warning' }, t('levelWarn'))
+      return h(StatusTag, { tone: 'info' }, t('levelInfo'))
+    }
+
     function Btn(props) {
-      const { primary, danger, children, ...rest } = props
+      const { primary, danger, icon, children, className, ...rest } = props
+      if (UiButton) {
+        return h(UiButton, {
+          type: 'button',
+          variant: primary ? 'primary' : 'outline',
+          size: 'sm',
+          icon: icon || undefined,
+          className: ['dsh-cj-btn-sized', danger ? 'dsh-cj-btn-danger' : '', className].filter(Boolean).join(' ') || undefined,
+          ...rest
+        }, children)
+      }
       return h('button', {
         type: 'button',
-        className: 'dsh-cj-btn',
+        className: ['dsh-cj-btn', className].filter(Boolean).join(' '),
         'data-primary': primary ? '1' : undefined,
         'data-danger': danger ? '1' : undefined,
         ...rest
-      }, children)
+      }, icon || null, children)
+    }
+
+    function FieldInput(props) {
+      const { className, ...rest } = props
+      if (UiInput) {
+        return h(UiInput, { className: className || undefined, ...rest })
+      }
+      return h('input', { className: ['dsh-cj-input', className].filter(Boolean).join(' '), ...rest })
+    }
+
+    function editionLabel(t, edition) {
+      return edition === 'region' ? t('editionRegion') : t('editionCentral')
+    }
+
+    function AccountModal({ open, title, form, setForm, busy, onClose, onSave, t, mode }) {
+      const body = h(React.Fragment, null,
+        h('div', { className: 'dsh-cj-field' },
+          h('label', { className: 'dsh-cj-label' }, t('name')),
+          h(FieldInput, {
+            value: form.name,
+            placeholder: t('namePh'),
+            onChange: (e) => setForm({ ...form, name: e.target.value }),
+            'data-modal-autofocus': true
+          })
+        ),
+        h('div', { className: 'dsh-cj-field' },
+          h('label', { className: 'dsh-cj-label' }, t('edition')),
+          h(SelectField, {
+            value: form.edition,
+            style: { width: '100%' },
+            'aria-label': t('edition'),
+            options: [
+              { value: 'central', label: t('editionCentral') },
+              { value: 'region', label: t('editionRegion') }
+            ],
+            onChange: (v) => setForm({ ...form, edition: v })
+          }),
+          h('div', { className: 'dsh-cj-muted' }, t('editionHint'))
+        ),
+        form.edition === 'central'
+          ? h('div', { className: 'dsh-cj-field' },
+              h('label', { className: 'dsh-cj-label' }, t('orgId')),
+              h(FieldInput, {
+                value: form.organizationId,
+                placeholder: t('orgIdPh'),
+                onChange: (e) => setForm({ ...form, organizationId: e.target.value })
+              })
+            )
+          : h('div', { className: 'dsh-cj-field' },
+              h('label', { className: 'dsh-cj-label' }, t('apiBase')),
+              h(FieldInput, {
+                value: form.apiBaseUrl,
+                placeholder: t('apiBasePh'),
+                onChange: (e) => setForm({ ...form, apiBaseUrl: e.target.value })
+              })
+            ),
+        h('div', { className: 'dsh-cj-field' },
+          h('label', { className: 'dsh-cj-label' }, t('token')),
+          h(FieldInput, {
+            type: 'password', value: form.token,
+            placeholder: mode === 'edit' ? t('tokenPhEdit') : t('tokenPh'),
+            onChange: (e) => setForm({ ...form, token: e.target.value })
+          })
+        ),
+        h('div', { className: 'dsh-cj-field' },
+          h('label', { className: 'dsh-cj-label' }, t('authors')),
+          h(FieldInput, {
+            value: form.authorFilters,
+            placeholder: t('authorsPh'),
+            onChange: (e) => setForm({ ...form, authorFilters: e.target.value })
+          }),
+          h('div', { className: 'dsh-cj-muted' }, t('authorsHint'))
+        ),
+        h('div', { className: 'dsh-cj-field' },
+          h('label', { className: 'dsh-cj-label' }, t('defaultBranch')),
+          h(FieldInput, {
+            value: form.defaultBranch,
+            placeholder: t('defaultBranchPh'),
+            onChange: (e) => setForm({ ...form, defaultBranch: e.target.value })
+          })
+        )
+      )
+
+      const footer = h(React.Fragment, null,
+        h(Btn, { icon: IconClose ? h(IconClose) : null, onClick: onClose }, t('cancel')),
+        h(Btn, { primary: true, disabled: busy, icon: IconSave ? h(IconSave) : null, onClick: onSave }, t('save'))
+      )
+
+      if (UiModal) {
+        return h(UiModal, {
+          open: !!open,
+          onClose,
+          title,
+          closeLabel: t('cancel'),
+          footer,
+          backdropBlur: true
+        }, body)
+      }
+
+      if (!open) return null
+      return h('div', { className: 'dsh-cj-modal-mask', onClick: onClose },
+        h('div', { className: 'dsh-cj-modal', onClick: (e) => e.stopPropagation() },
+          h('h3', null, title),
+          body,
+          h('div', { className: 'dsh-cj-actions' }, footer)
+        )
+      )
     }
 
     function PanelIcon(props) {
@@ -386,7 +1424,7 @@ window.__ModuleLoader__.load({
       }
     }
 
-    function AccountsPage({ t, accounts, activeId, onChanged, busy, setBusy, setError }) {
+    function AccountsPage({ t, accounts, activeId, onChanged, busy, setBusy, notify }) {
       const [modal, setModal] = useState(null)
       const [form, setForm] = useState(emptyForm())
 
@@ -405,8 +1443,19 @@ window.__ModuleLoader__.load({
         setModal('edit')
       }
 
+      const switchAccount = async (id) => {
+        if (!id || id === activeId) return
+        setBusy(true)
+        try {
+          await api('/api/accounts/' + encodeURIComponent(id) + '/activate', { method: 'POST', body: '{}' })
+          await onChanged()
+          notify(t('activateOk'), 'success')
+        } catch (e) { notify(e.message || String(e), 'error') }
+        finally { setBusy(false) }
+      }
+
       const save = async () => {
-        setBusy(true); setError('')
+        setBusy(true)
         try {
           const payload = {
             name: form.name,
@@ -430,14 +1479,29 @@ window.__ModuleLoader__.load({
           }
           setModal(null)
           await onChanged()
-        } catch (e) { setError(e.message || String(e)) }
+          notify(t('saveOk'), 'success')
+        } catch (e) { notify(e.message || String(e), 'error') }
         finally { setBusy(false) }
       }
 
-      return h(React.Fragment, null,
+      return h('div', { className: 'dsh-cj-page-scroll' },
+        h(PageHead, { desc: t('descAccounts') }),
         h('div', { className: 'dsh-cj-row dsh-cj-row-end' },
-          h('div', { className: 'dsh-cj-muted' }, accounts.length ? null : t('emptyAccount')),
-          h(Btn, { primary: true, onClick: openNew }, t('newAccount'))
+          accounts.length
+            ? h('div', { className: 'dsh-cj-actions' },
+                h('span', { className: 'dsh-cj-muted' }, t('currentAccount')),
+                h(SelectField, {
+                  style: { minWidth: 180 },
+                  value: activeId || '',
+                  disabled: busy || accounts.length < 2,
+                  'aria-label': t('switchAccount'),
+                  placeholder: t('switchAccount'),
+                  options: accounts.map((a) => ({ value: a.id, label: a.name || a.id })),
+                  onChange: (id) => { void switchAccount(id) }
+                })
+              )
+            : h('div', { className: 'dsh-cj-muted' }, t('emptyAccount')),
+          h(Btn, { primary: true, icon: IconPlus ? h(IconPlus) : null, onClick: openNew }, t('newAccount'))
         ),
         h('div', { className: 'dsh-cj-table-wrap' },
           h('table', { className: 'dsh-cj-table' },
@@ -452,44 +1516,42 @@ window.__ModuleLoader__.load({
               h('tr', { key: a.id },
                 h('td', null,
                   a.name, ' ',
-                  a.active ? h('span', { className: 'dsh-cj-badge' }, t('active')) : null
+                  a.active ? h(StatusTag, { tone: 'solid' }, t('active')) : null
                 ),
-                h('td', null, a.edition || '-'),
+                h('td', null, editionLabel(t, a.edition)),
                 h('td', null, a.organizationId || a.apiBaseUrl || '-'),
                 h('td', null, (a.authorFilters || []).join(', ') || '-'),
                 h('td', null,
                   h('div', { className: 'dsh-cj-actions' },
                     !a.active && h(Btn, {
                       disabled: busy,
-                      onClick: async () => {
-                        setBusy(true); setError('')
-                        try {
-                          await api('/api/accounts/' + encodeURIComponent(a.id) + '/activate', { method: 'POST', body: '{}' })
-                          await onChanged()
-                        } catch (e) { setError(e.message || String(e)) }
-                        finally { setBusy(false) }
-                      }
+                      icon: IconCheck ? h(IconCheck) : null,
+                      onClick: () => { void switchAccount(a.id) }
                     }, t('activate')),
                     h(Btn, {
                       disabled: busy,
+                      icon: IconGlobe ? h(IconGlobe) : null,
                       onClick: async () => {
-                        setBusy(true); setError('')
+                        setBusy(true)
                         try {
                           await api('/api/accounts/' + encodeURIComponent(a.id) + '/test', { method: 'POST', body: '{}' })
-                        } catch (e) { setError(e.message || String(e)) }
+                          notify(t('testOk'), 'success')
+                        } catch (e) { notify(e.message || String(e), 'error') }
                         finally { setBusy(false) }
                       }
                     }, t('test')),
-                    h(Btn, { onClick: () => openEdit(a) }, t('edit')),
+                    h(Btn, { icon: IconEdit ? h(IconEdit) : null, onClick: () => openEdit(a) }, t('edit')),
                     h(Btn, {
                       danger: true, disabled: busy,
+                      icon: IconTrash ? h(IconTrash) : null,
                       onClick: async () => {
                         if (!confirm(t('confirmDelete'))) return
-                        setBusy(true); setError('')
+                        setBusy(true)
                         try {
                           await api('/api/accounts/' + encodeURIComponent(a.id), { method: 'DELETE' })
                           await onChanged()
-                        } catch (e) { setError(e.message || String(e)) }
+                          notify(t('clearOk'), 'success')
+                        } catch (e) { notify(e.message || String(e), 'error') }
                         finally { setBusy(false) }
                       }
                     }, t('remove'))
@@ -499,61 +1561,98 @@ window.__ModuleLoader__.load({
             ))
           )
         ),
-        modal && h('div', { className: 'dsh-cj-modal-mask', onClick: () => setModal(null) },
-          h('div', { className: 'dsh-cj-modal', onClick: (e) => e.stopPropagation() },
-            h('h3', null, modal === 'edit' ? t('edit') : t('newAccount')),
-            h('div', { className: 'dsh-cj-field' },
-              h('label', { className: 'dsh-cj-label' }, t('name')),
-              h('input', { className: 'dsh-cj-input', value: form.name, onChange: (e) => setForm({ ...form, name: e.target.value }) })
-            ),
-            h('div', { className: 'dsh-cj-field' },
-              h('label', { className: 'dsh-cj-label' }, t('edition')),
-              h('select', {
-                className: 'dsh-cj-select', value: form.edition,
-                onChange: (e) => setForm({ ...form, edition: e.target.value })
-              },
-                h('option', { value: 'central' }, 'central'),
-                h('option', { value: 'region' }, 'region')
-              )
-            ),
-            form.edition === 'central'
-              ? h('div', { className: 'dsh-cj-field' },
-                  h('label', { className: 'dsh-cj-label' }, 'organizationId'),
-                  h('input', { className: 'dsh-cj-input', value: form.organizationId, onChange: (e) => setForm({ ...form, organizationId: e.target.value }) })
-                )
-              : h('div', { className: 'dsh-cj-field' },
-                  h('label', { className: 'dsh-cj-label' }, 'API Base URL'),
-                  h('input', { className: 'dsh-cj-input', value: form.apiBaseUrl, onChange: (e) => setForm({ ...form, apiBaseUrl: e.target.value }) })
-                ),
-            h('div', { className: 'dsh-cj-field' },
-              h('label', { className: 'dsh-cj-label' }, t('token')),
-              h('input', {
-                className: 'dsh-cj-input', type: 'password', value: form.token,
-                placeholder: modal === 'edit' ? '留空则不修改' : '',
-                onChange: (e) => setForm({ ...form, token: e.target.value })
-              })
-            ),
-            h('div', { className: 'dsh-cj-field' },
-              h('label', { className: 'dsh-cj-label' }, t('authors')),
-              h('input', { className: 'dsh-cj-input', value: form.authorFilters, onChange: (e) => setForm({ ...form, authorFilters: e.target.value }) })
-            ),
-            h('div', { className: 'dsh-cj-field' },
-              h('label', { className: 'dsh-cj-label' }, t('defaultBranch')),
-              h('input', { className: 'dsh-cj-input', value: form.defaultBranch, onChange: (e) => setForm({ ...form, defaultBranch: e.target.value }) })
-            ),
-            h('div', { className: 'dsh-cj-actions' },
-              h(Btn, { onClick: () => setModal(null) }, t('cancel')),
-              h(Btn, { primary: true, disabled: busy, onClick: save }, t('save'))
-            )
+        h(AccountModal, {
+          open: !!modal,
+          mode: modal,
+          title: modal === 'edit' ? t('edit') : t('newAccount'),
+          form, setForm, busy, t,
+          onClose: () => setModal(null),
+          onSave: save
+        })
+      )
+    }
+
+    function BranchSelect({ accountId, repo, value, onChange, notify, t }) {
+      const [options, setOptions] = useState([])
+      const [loading, setLoading] = useState(false)
+      const loaded = React.useRef(false)
+      const fallback = repo.defaultBranch || 'master'
+
+      const ensureLoaded = async () => {
+        if (loaded.current || loading) return
+        setLoading(true)
+        try {
+          const data = await api(
+            '/api/repos/' + encodeURIComponent(repo.id) + '/branches?accountId=' + encodeURIComponent(accountId)
           )
+          const names = (data.branches || []).map((b) => b.name).filter(Boolean)
+          if (fallback && !names.includes(fallback)) names.unshift(fallback)
+          setOptions(names)
+          loaded.current = true
+        } catch (e) {
+          if (!options.length) setOptions(fallback ? [fallback] : [])
+          notify(e.message || String(e), 'error')
+        } finally { setLoading(false) }
+      }
+
+      useEffect(() => {
+        loaded.current = false
+        setOptions(fallback ? [fallback] : [])
+      }, [repo.id, fallback])
+
+      const current = value || fallback
+      const list = options.includes(current) ? options : (current ? [current].concat(options) : options)
+
+      return h(SelectField, {
+        style: { width: 160 },
+        value: current,
+        disabled: loading,
+        title: loading ? '…' : t('branch'),
+        'aria-label': t('branch'),
+        onOpen: () => { ensureLoaded().catch(() => {}) },
+        options: list.map((name) => ({
+          value: name,
+          label: name === fallback ? (name + ' (' + t('defaultBranch') + ')') : name
+        })),
+        onChange: (v) => onChange(v === fallback ? '' : v)
+      })
+    }
+
+    function WatchFilter({ t, value, onChange }) {
+      const options = [
+        { value: 'watched', label: t('filterWatched') },
+        { value: 'unwatched', label: t('filterUnwatched') },
+        { value: 'all', label: t('filterAll') }
+      ]
+      if (UiSeg) {
+        return h(UiSeg, {
+          id: 'dsh-cj-watch-filter',
+          label: t('watched'),
+          value,
+          options,
+          onChange
+        })
+      }
+      return h('div', { className: 'dsh-cj-seg', role: 'tablist' },
+        options.map((o) =>
+          h('button', {
+            key: o.value,
+            type: 'button',
+            'data-active': value === o.value ? '1' : '0',
+            onClick: () => { if (value !== o.value) onChange(o.value) }
+          }, o.label)
         )
       )
     }
 
-    function ReposPage({ t, accountId, busy, setBusy, setError }) {
+    function ReposPage({ t, accountId, busy, setBusy, notify }) {
       const [repos, setRepos] = useState([])
       const [watched, setWatched] = useState([])
       const [branches, setBranches] = useState({})
+      const [keyword, setKeyword] = useState('')
+      const [watchFilter, setWatchFilter] = useState('watched')
+      const [page, setPage] = useState(1)
+      const [pageSize, setPageSize] = useState(10)
 
       const load = useCallback(async () => {
         if (!accountId) return
@@ -563,49 +1662,89 @@ window.__ModuleLoader__.load({
         setBranches(data.repoBranches || {})
       }, [accountId])
 
-      useEffect(() => { load().catch((e) => setError(e.message || String(e))) }, [load, setError])
-
-      if (!accountId) return h('p', { className: 'dsh-cj-muted' }, t('emptyAccount'))
+      useEffect(() => { load().catch((e) => notify(e.message || String(e), 'error')) }, [load, notify])
+      useEffect(() => { setPage(1) }, [keyword, watchFilter, accountId, pageSize])
 
       const allMode = watched.length === 0
+      const isWatched = useCallback((id) => allMode || watched.includes(id), [allMode, watched])
 
-      return h(React.Fragment, null,
+      const filtered = useMemo(() => {
+        const q = keyword.trim().toLowerCase()
+        return repos.filter((r) => {
+          const watchedNow = isWatched(r.id)
+          if (watchFilter === 'watched' && !watchedNow) return false
+          if (watchFilter === 'unwatched' && watchedNow) return false
+          if (!q) return true
+          const label = shortRepoLabel(r.displayName || r.fullName || r.name).toLowerCase()
+          return label.includes(q) || String(r.name || '').toLowerCase().includes(q)
+        })
+      }, [repos, keyword, watchFilter, isWatched])
+
+      const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+      const safePage = Math.min(page, totalPages)
+      const pageRepos = filtered.slice((safePage - 1) * pageSize, safePage * pageSize)
+
+      if (!accountId) {
+        return h('div', { className: 'dsh-cj-page-fill' },
+          h(PageHead, { desc: t('descRepos') }),
+          h('p', { className: 'dsh-cj-muted' }, t('emptyAccount'))
+        )
+      }
+
+      return h('div', { className: 'dsh-cj-page-fill' },
+        h(PageHead, { desc: t('descRepos') }),
         h('div', { className: 'dsh-cj-row' },
+          h(WatchFilter, { t, value: watchFilter, onChange: setWatchFilter }),
+          h(FieldInput, {
+            style: { width: 180 },
+            icon: IconSearch ? h(IconSearch) : undefined,
+            placeholder: t('repoKeyword'),
+            value: keyword,
+            onChange: (e) => setKeyword(e.target.value)
+          }),
           h('div', { className: 'dsh-cj-actions' },
             h(Btn, {
-              disabled: busy, onClick: async () => {
-                setBusy(true); setError('')
+              disabled: busy,
+              icon: IconRefresh ? h(IconRefresh) : null,
+              onClick: async () => {
+                setBusy(true)
                 try {
                   await api('/api/repos/refresh', { method: 'POST', body: JSON.stringify({ accountId }) })
                   await load()
-                } catch (e) { setError(e.message || String(e)) }
+                  notify(t('refreshOk'), 'success')
+                } catch (e) { notify(e.message || String(e), 'error') }
                 finally { setBusy(false) }
               }
             }, t('refresh')),
             h(Btn, {
-              disabled: busy, onClick: async () => {
-                setBusy(true); setError('')
+              disabled: busy,
+              icon: IconSave ? h(IconSave) : null,
+              onClick: async () => {
+                setBusy(true)
                 try {
                   await api('/api/repos/watch', {
                     method: 'PUT',
                     body: JSON.stringify({ accountId, watchedRepoIds: watched, repoBranches: branches })
                   })
                   await load()
-                } catch (e) { setError(e.message || String(e)) }
+                  notify(t('saveWatchOk'), 'success')
+                } catch (e) { notify(e.message || String(e), 'error') }
                 finally { setBusy(false) }
               }
             }, t('saveWatch')),
             h(Btn, {
-              primary: true, disabled: busy, onClick: async () => {
-                setBusy(true); setError('')
+              primary: true, disabled: busy,
+              icon: IconDownload ? h(IconDownload) : null,
+              onClick: async () => {
+                setBusy(true)
                 try {
-                  await api('/api/sync', { method: 'POST', body: JSON.stringify({ accountId }) })
-                } catch (e) { setError(e.message || String(e)) }
+                  const result = await api('/api/sync', { method: 'POST', body: JSON.stringify({ accountId }) })
+                  notify(syncToastText(t, result), (result.errors && result.errors.length) ? 'error' : 'success')
+                } catch (e) { notify(e.message || String(e), 'error') }
                 finally { setBusy(false) }
               }
             }, t('syncWatched'))
-          ),
-          h('span', { className: 'dsh-cj-muted' }, allMode ? t('allRepos') : ('关注 ' + watched.length + ' 个'))
+          )
         ),
         h('div', { className: 'dsh-cj-table-wrap' },
           h('table', { className: 'dsh-cj-table' },
@@ -615,8 +1754,8 @@ window.__ModuleLoader__.load({
               h('th', null, t('branch')),
               h('th', null, '')
             )),
-            h('tbody', null, repos.map((r) => {
-              const checked = allMode ? true : watched.includes(r.id)
+            h('tbody', null, pageRepos.map((r) => {
+              const checked = isWatched(r.id)
               return h('tr', { key: r.id },
                 h('td', null,
                   h('input', {
@@ -624,48 +1763,72 @@ window.__ModuleLoader__.load({
                     checked,
                     onChange: (e) => {
                       if (allMode) {
-                        const ids = repos.map((x) => x.id).filter((id) => id !== r.id || e.target.checked)
-                        // leaving all-mode: start from all then uncheck current if needed
                         if (!e.target.checked) setWatched(repos.map((x) => x.id).filter((id) => id !== r.id))
                       } else if (e.target.checked) setWatched(watched.concat([r.id]))
                       else setWatched(watched.filter((id) => id !== r.id))
                     }
                   })
                 ),
-                h('td', null, r.fullName || r.name),
+                h('td', null, shortRepoLabel(r.displayName || r.fullName || r.name)),
                 h('td', null,
-                  h('input', {
-                    className: 'dsh-cj-input',
-                    style: { width: 140 },
-                    placeholder: r.defaultBranch || 'master',
+                  h(BranchSelect, {
+                    accountId,
+                    repo: r,
+                    t,
+                    notify,
                     value: branches[r.id] || '',
-                    onChange: (e) => setBranches({ ...branches, [r.id]: e.target.value })
+                    onChange: (next) => {
+                      const nextMap = { ...branches }
+                      if (!next) delete nextMap[r.id]
+                      else nextMap[r.id] = next
+                      setBranches(nextMap)
+                    }
                   })
                 ),
                 h('td', null,
-                  h(Btn, {
-                    disabled: busy,
-                    onClick: async () => {
-                      setBusy(true); setError('')
-                      try {
-                        await api('/api/sync', {
-                          method: 'POST',
-                          body: JSON.stringify({ accountId, repoIds: [r.id] })
-                        })
-                      } catch (e) { setError(e.message || String(e)) }
-                      finally { setBusy(false) }
-                    }
-                  }, t('sync')),
-                  r.webUrl ? h('a', { className: 'dsh-cj-link', href: r.webUrl, target: '_blank', rel: 'noreferrer', style: { marginLeft: 8 } }, '↗') : null
+                  h('div', { className: 'dsh-cj-actions' },
+                    h(Btn, {
+                      disabled: busy,
+                      icon: IconDownload ? h(IconDownload) : null,
+                      onClick: async () => {
+                        setBusy(true)
+                        try {
+                          const result = await api('/api/sync', {
+                            method: 'POST',
+                            body: JSON.stringify({ accountId, repoIds: [r.id] })
+                          })
+                          notify(syncToastText(t, result), (result.errors && result.errors.length) ? 'error' : 'success')
+                        } catch (e) { notify(e.message || String(e), 'error') }
+                        finally { setBusy(false) }
+                      }
+                    }, t('sync')),
+                    r.webUrl
+                      ? h(Btn, {
+                          icon: IconLink ? h(IconLink) : null,
+                          onClick: () => {
+                            try { window.open(r.webUrl, '_blank', 'noopener,noreferrer') } catch { /* ignore */ }
+                          }
+                        }, t('openRepo'))
+                      : null
+                  )
                 )
               )
             }))
           )
-        )
+        ),
+        h(TablePager, {
+          t,
+          total: filtered.length,
+          page: safePage,
+          pageSize,
+          busy,
+          onPageChange: setPage,
+          onPageSizeChange: (size) => { setPageSize(size); setPage(1) }
+        })
       )
     }
 
-    function CommitsPage({ t, accountId, busy, setBusy, setError }) {
+    function CommitsPage({ t, accountId, busy, setBusy, notify }) {
       const [repos, setRepos] = useState([])
       const [items, setItems] = useState([])
       const [total, setTotal] = useState(0)
@@ -674,15 +1837,16 @@ window.__ModuleLoader__.load({
       const [to, setTo] = useState('')
       const [keyword, setKeyword] = useState('')
       const [page, setPage] = useState(1)
-      const pageSize = 20
+      const [pageSize, setPageSize] = useState(10)
 
-      const load = useCallback(async (nextPage) => {
+      const load = useCallback(async (nextPage, nextSize) => {
         if (!accountId) return
+        const size = nextSize || pageSize
         const p = nextPage || page
         const q = new URLSearchParams({
           accountId,
-          limit: String(pageSize),
-          offset: String((p - 1) * pageSize)
+          limit: String(size),
+          offset: String((p - 1) * size)
         })
         if (repoId) q.set('repoId', repoId)
         if (from) q.set('from', from + 'T00:00:00.000Z')
@@ -696,24 +1860,36 @@ window.__ModuleLoader__.load({
         setTotal(commits.total || 0)
         setRepos(repoData.repos || [])
         setPage(p)
-      }, [accountId, from, keyword, page, repoId, to])
+        if (nextSize) setPageSize(size)
+      }, [accountId, from, keyword, page, pageSize, repoId, to])
 
       useEffect(() => {
         if (!accountId) return
-        load(1).catch((e) => setError(e.message || String(e)))
+        load(1).catch((e) => notify(e.message || String(e), 'error'))
       }, [accountId]) // eslint-disable-line
 
-      if (!accountId) return h('p', { className: 'dsh-cj-muted' }, t('emptyAccount'))
+      if (!accountId) {
+        return h('div', { className: 'dsh-cj-page-fill' },
+          h(PageHead, { desc: t('descCommits') }),
+          h('p', { className: 'dsh-cj-muted' }, t('emptyAccount'))
+        )
+      }
 
-      return h(React.Fragment, null,
+      return h('div', { className: 'dsh-cj-page-fill' },
+        h(PageHead, { desc: t('descCommits') }),
         h('div', { className: 'dsh-cj-row' },
-          h('select', {
-            className: 'dsh-cj-select', value: repoId,
-            onChange: (e) => setRepoId(e.target.value)
-          },
-            h('option', { value: '' }, t('allRepos')),
-            repos.map((r) => h('option', { key: r.id, value: r.id }, r.fullName || r.name))
-          ),
+          h(SelectField, {
+            value: repoId,
+            style: { minWidth: 180 },
+            'aria-label': t('repo'),
+            options: [{ value: '', label: t('allRepos') }].concat(
+              repos.map((r) => ({
+                value: r.id,
+                label: shortRepoLabel(r.displayName || r.fullName || r.name)
+              }))
+            ),
+            onChange: setRepoId
+          }),
           h('input', { className: 'dsh-cj-input', type: 'date', value: from, onChange: (e) => setFrom(e.target.value), title: t('from') }),
           h('input', { className: 'dsh-cj-input', type: 'date', value: to, onChange: (e) => setTo(e.target.value), title: t('to') }),
           h('input', {
@@ -723,17 +1899,26 @@ window.__ModuleLoader__.load({
           }),
           h(Btn, {
             primary: true, disabled: busy,
-            onClick: () => { setBusy(true); setError(''); load(1).catch((e) => setError(e.message || String(e))).finally(() => setBusy(false)) }
+            icon: IconSearch ? h(IconSearch) : null,
+            onClick: () => {
+              setBusy(true)
+              load(1)
+                .then(() => notify(t('queryOk'), 'success'))
+                .catch((e) => notify(e.message || String(e), 'error'))
+                .finally(() => setBusy(false))
+            }
           }, t('query')),
           h(Btn, {
             danger: true, disabled: busy,
+            icon: IconTrash ? h(IconTrash) : null,
             onClick: async () => {
               if (!confirm(t('confirmClearCommits'))) return
-              setBusy(true); setError('')
+              setBusy(true)
               try {
                 await api('/api/commits/clear', { method: 'POST', body: JSON.stringify({ accountId }) })
                 await load(1)
-              } catch (e) { setError(e.message || String(e)) }
+                notify(t('clearOk'), 'success')
+              } catch (e) { notify(e.message || String(e), 'error') }
               finally { setBusy(false) }
             }
           }, t('clearCommits'))
@@ -747,7 +1932,7 @@ window.__ModuleLoader__.load({
             h('tbody', null, items.map((c) =>
               h('tr', { key: c.id },
                 h('td', null, (c.committedAt || '').slice(0, 16).replace('T', ' ')),
-                h('td', null, c.repoName),
+                h('td', null, shortRepoLabel(c.repoName)),
                 h('td', null, c.title),
                 h('td', null, c.authorName),
                 h('td', null,
@@ -759,34 +1944,80 @@ window.__ModuleLoader__.load({
             ))
           )
         ),
-        h('div', { className: 'dsh-cj-pager' },
-          h('span', { className: 'dsh-cj-muted' }, total + ' · p' + page),
-          h(Btn, {
-            disabled: busy || page <= 1,
-            onClick: () => { setBusy(true); load(page - 1).catch((e) => setError(e.message || String(e))).finally(() => setBusy(false)) }
-          }, '‹'),
-          h(Btn, {
-            disabled: busy || page * pageSize >= total,
-            onClick: () => { setBusy(true); load(page + 1).catch((e) => setError(e.message || String(e))).finally(() => setBusy(false)) }
-          }, '›')
-        )
+        h(TablePager, {
+          t,
+          total,
+          page,
+          pageSize,
+          busy,
+          onPageChange: (p) => {
+            setBusy(true)
+            load(p).catch((e) => notify(e.message || String(e), 'error')).finally(() => setBusy(false))
+          },
+          onPageSizeChange: (size) => {
+            setBusy(true)
+            load(1, size).catch((e) => notify(e.message || String(e), 'error')).finally(() => setBusy(false))
+          }
+        })
       )
     }
 
-    function ActivityPage({ t, accountId, setError }) {
+    function formatDayTitle(iso) {
+      const d = new Date(iso + 'T12:00:00')
+      if (Number.isNaN(d.getTime())) return iso
+      const wd = ['日', '一', '二', '三', '四', '五', '六'][d.getDay()]
+      return (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日 周' + wd
+    }
+
+    function ActivityPage({ t, accountId, notify }) {
       const [year, setYear] = useState(0)
+      const [years, setYears] = useState([])
       const [data, setData] = useState(null)
       const [day, setDay] = useState(null)
       const [dayItems, setDayItems] = useState([])
+      const [dayLoading, setDayLoading] = useState(false)
+      const weekLabels = ['一', '二', '三', '四', '五', '六', '日']
+      const dayReq = React.useRef(0)
+
+      useEffect(() => {
+        setYear(0)
+        setData(null)
+        setYears([])
+        setDay(null)
+        setDayItems([])
+      }, [accountId])
 
       useEffect(() => {
         if (!accountId) return
         const q = new URLSearchParams({ accountId })
         if (year) q.set('year', String(year))
         api('/api/activity?' + q.toString())
-          .then(setData)
-          .catch((e) => setError(e.message || String(e)))
-      }, [accountId, year, setError])
+          .then((d) => {
+            setData(d)
+            setYears(d.years || [])
+            setDay(null)
+            setDayItems([])
+          })
+          .catch((e) => notify(e.message || String(e), 'error'))
+      }, [accountId, year, notify])
+
+      const openDay = async (date) => {
+        const reqId = ++dayReq.current
+        setDay(date)
+        setDayItems([])
+        setDayLoading(true)
+        try {
+          const r = await api('/api/activity/day?accountId=' + encodeURIComponent(accountId) + '&date=' + encodeURIComponent(date))
+          if (dayReq.current === reqId) setDayItems(r.commits || [])
+        } catch (e) {
+          if (dayReq.current === reqId) {
+            setDayItems([])
+            notify(e.message || String(e), 'error')
+          }
+        } finally {
+          if (dayReq.current === reqId) setDayLoading(false)
+        }
+      }
 
       const heatmap = useMemo(() => {
         if (!data) return null
@@ -800,124 +2031,315 @@ window.__ModuleLoader__.load({
         const weeks = Math.ceil(totalDays / 7)
         const countByDay = new Map((data.days || []).map((d) => [d.date, d.count]))
         const step = Math.max(1, Math.ceil((data.stats.maxDayCount || 1) / 4))
-        const todayKey = new Date().toISOString().slice(0, 10)
+        const now = new Date()
+        const todayKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')
         const cells = []
+        const weekdayCounts = [0, 0, 0, 0, 0, 0, 0]
         for (let i = 0; i < weeks * 7; i++) {
           const d = new Date(gridStart); d.setDate(gridStart.getDate() + i)
-          const key = d.toISOString().slice(0, 10)
+          const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
           const inRange = d >= fromDay && d <= toDay
           const count = inRange ? (countByDay.get(key) || 0) : 0
           const level = count <= 0 ? 0 : Math.min(4, Math.ceil(count / step))
+          if (inRange && count > 0) weekdayCounts[(d.getDay() + 6) % 7] += count
           cells.push({ key, count, inRange, level, isToday: key === todayKey })
         }
-        return { weeks, cells }
+        // Sparse month labels like the desktop reference (avoid crowding near the end)
+        const monthLabels = []
+        let lastLabelWeek = -4
+        let prevMonth = -1
+        for (let w = 0; w < weeks; w++) {
+          const d = new Date(gridStart); d.setDate(gridStart.getDate() + w * 7)
+          if (d < fromDay) continue
+          if (d.getMonth() === prevMonth) continue
+          prevMonth = d.getMonth()
+          if (w - lastLabelWeek < 3 || w > weeks - 4) continue
+          monthLabels.push({ column: w + 1, text: (d.getMonth() + 1) + '月' })
+          lastLabelWeek = w
+        }
+        let currentStreak = 0
+        for (let cur = new Date(Math.min(toDay.getTime(), Date.now())); cur >= fromDay; cur.setDate(cur.getDate() - 1)) {
+          const key = cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0') + '-' + String(cur.getDate()).padStart(2, '0')
+          if ((countByDay.get(key) || 0) > 0) currentStreak++
+          else break
+        }
+        const avg = data.stats.activeDays
+          ? Math.round((data.stats.totalCommits / data.stats.activeDays) * 10) / 10
+          : 0
+        const wdMax = Math.max(1, ...weekdayCounts)
+        return { weeks, cells, monthLabels, weekdayCounts, wdMax, currentStreak, avg }
       }, [data])
 
-      if (!accountId) return h('p', { className: 'dsh-cj-muted' }, t('emptyAccount'))
-      if (!data) return h('p', { className: 'dsh-cj-muted' }, '…')
-      if (!data.stats.totalCommits) return h('p', { className: 'dsh-cj-muted' }, t('noData'))
+      if (!accountId) {
+        return h('div', { className: 'dsh-cj-page-scroll' },
+          h(PageHead, { desc: t('descActivity') }),
+          h('p', { className: 'dsh-cj-muted' }, t('emptyAccount'))
+        )
+      }
+      if (!data) {
+        return h('div', { className: 'dsh-cj-page-scroll' },
+          h(PageHead, { desc: t('descActivity') }),
+          h('p', { className: 'dsh-cj-muted' }, '…')
+        )
+      }
+      if (!data.stats.totalCommits) {
+        return h('div', { className: 'dsh-cj-page-scroll' },
+          h(PageHead, { desc: t('descActivity') }),
+          h('div', { className: 'dsh-cj-row dsh-cj-row-end' },
+            h('span'),
+            h(SelectField, {
+              value: year,
+              'aria-label': t('recentYear'),
+              options: [{ value: 0, label: t('recentYear') }].concat(
+                years.map((y) => ({ value: y, label: y + ' 年' }))
+              ),
+              onChange: (v) => { setData(null); setYear(Number(v)) }
+            })
+          ),
+          h('p', { className: 'dsh-cj-muted' }, t('noData')),
+          h('p', { className: 'dsh-cj-footnote' }, t('activityFootnote'))
+        )
+      }
 
-      return h(React.Fragment, null,
+      const stats = data.stats
+
+      return h('div', { className: 'dsh-cj-page-scroll' },
+        // h(PageHead, {
+        //   desc: (year ? (year + ' 年提交活跃度') : t('descActivity')) + ' · ' + data.from + ' ~ ' + data.to
+        // }),
         h('div', { className: 'dsh-cj-row dsh-cj-row-end' },
-          h('span', { className: 'dsh-cj-muted' }, data.from + ' ~ ' + data.to),
-          h('select', {
-            className: 'dsh-cj-select', value: year,
-            onChange: (e) => setYear(Number(e.target.value))
-          },
-            h('option', { value: 0 }, t('recentYear')),
-            (data.years || []).map((y) => h('option', { key: y, value: y }, y + ' 年'))
-          )
+          h('span', { className: 'dsh-cj-muted' }, t('heatHint')),
+          h(SelectField, {
+            value: year,
+            'aria-label': t('recentYear'),
+            options: [{ value: 0, label: t('recentYear') }].concat(
+              years.map((y) => ({ value: y, label: y + ' 年' }))
+            ),
+            onChange: (v) => { setData(null); setYear(Number(v)) }
+          })
         ),
         h('div', { className: 'dsh-cj-stats' },
-          [
-            [t('totalCommits'), data.stats.totalCommits],
-            [t('activeDays'), data.stats.activeDays],
-            [t('longestStreak'), data.stats.longestStreak],
-            [t('maxDay'), data.stats.maxDayCount]
-          ].map(([l, v]) => h('div', { className: 'dsh-cj-stat', key: l },
-            h('div', { className: 'l' }, l),
-            h('div', { className: 'v' }, v)
-          ))
+          h('div', { className: 'dsh-cj-stat' },
+            h('div', { className: 'l' }, t('totalCommits')),
+            h('div', { className: 'v' }, stats.totalCommits),
+            h('div', { className: 'n' }, t('noteTotal'))
+          ),
+          h('div', { className: 'dsh-cj-stat' },
+            h('div', { className: 'l' }, t('activeDays')),
+            h('div', { className: 'v' }, stats.activeDays, h('small', null, t('unitDay'))),
+            h('div', { className: 'n' }, t('noteActiveDays'))
+          ),
+          h('div', { className: 'dsh-cj-stat' },
+            h('div', { className: 'l' }, t('longestStreak')),
+            h('div', { className: 'v' }, stats.longestStreak, h('small', null, t('unitDay'))),
+            h('div', { className: 'n' }, t('noteStreak'))
+          ),
+          h('div', { className: 'dsh-cj-stat' },
+            h('div', { className: 'l' }, t('maxDay')),
+            h('div', { className: 'v' }, stats.maxDayCount, h('small', null, t('unitCommit'))),
+            h('div', { className: 'n' }, stats.maxDayDate || t('notePeak'))
+          )
         ),
         heatmap && h('div', { className: 'dsh-cj-heat' },
           h('div', { className: 'dsh-cj-heat-body' },
-            h('div', { className: 'dsh-cj-weekdays' }, ['一', '二', '三', '四', '五', '六', '日'].map((x) => h('span', { key: x }, x))),
-            h('div', null,
-              h('div', { className: 'dsh-cj-grid' },
-                heatmap.cells.map((c) =>
-                  h('button', {
+            h('div', { className: 'dsh-cj-weekdays', 'aria-hidden': true },
+              weekLabels.map((x) => h('span', { key: x }, x))
+            ),
+            h('div', { className: 'dsh-cj-heat-main' },
+              h('div', {
+                className: 'dsh-cj-months',
+                'aria-hidden': true,
+                style: { gridTemplateColumns: 'repeat(' + heatmap.weeks + ', calc(var(--dsh-cj-cell) + var(--dsh-cj-gap)))' }
+              },
+                heatmap.monthLabels.map((m) =>
+                  h('span', {
+                    key: m.column + '-' + m.text,
+                    className: 'dsh-cj-month',
+                    style: { gridColumn: m.column }
+                  }, m.text)
+                )
+              ),
+              h('div', {
+                className: 'dsh-cj-grid',
+                role: 'group',
+                'aria-label': data.from + ' ~ ' + data.to
+              },
+                heatmap.cells.map((c) => {
+                  const clickable = c.inRange && c.count > 0
+                  const tip = c.inRange ? (c.key + ' · ' + c.count + ' ' + t('unitCommit')) : c.key
+                  return h('button', {
                     key: c.key,
                     type: 'button',
                     className: [
                       'dsh-cj-cell',
                       c.inRange ? 'lv' + c.level : 'is-blank',
-                      c.count > 0 ? 'has-commits' : '',
-                      c.isToday ? 'is-today' : ''
+                      clickable ? 'has-commits' : '',
+                      c.isToday ? 'is-today' : '',
+                      day === c.key ? 'is-today' : ''
                     ].filter(Boolean).join(' '),
-                    title: c.key + ' · ' + c.count,
-                    disabled: !(c.inRange && c.count > 0),
-                    onClick: async () => {
-                      setDay(c.key)
-                      try {
-                        const r = await api('/api/activity/day?accountId=' + encodeURIComponent(accountId) + '&date=' + encodeURIComponent(c.key))
-                        setDayItems(r.commits || [])
-                      } catch (e) { setError(e.message || String(e)) }
-                    }
+                    title: clickable ? tip + '（点击查看）' : tip,
+                    disabled: !clickable,
+                    onClick: () => openDay(c.key)
                   })
-                )
+                })
+              )
+            )
+          ),
+          h('div', { className: 'dsh-cj-heat-foot' },
+            h('span', null, fillMsg(t('heatSummary'), {
+              w: heatmap.weeks,
+              a: stats.activeDays,
+              c: stats.totalCommits
+            })),
+            h('span', { className: 'dsh-cj-heat-legend' },
+              h('span', null, t('less')),
+              [0, 1, 2, 3, 4].map((lv) =>
+                h('span', { key: lv, className: 'swatch' + (lv ? ' lv' + lv : '') })
+              ),
+              h('span', null, t('more'))
+            )
+          )
+        ),
+        heatmap && h('div', { className: 'dsh-cj-insights' },
+          h('div', { className: 'dsh-cj-insight' },
+            h('h4', null, t('weekdayDist')),
+            heatmap.weekdayCounts.map((n, i) =>
+              h('div', { className: 'dsh-cj-wd', key: weekLabels[i] },
+                h('span', null, weekLabels[i]),
+                h('div', { className: 'dsh-cj-wd-bar' },
+                  h('i', { style: { width: Math.round((n / heatmap.wdMax) * 100) + '%' } })
+                ),
+                h('span', null, n)
+              )
+            )
+          ),
+          h('div', { className: 'dsh-cj-insight' },
+            h('h4', null, t('activity')),
+            h('div', { className: 'dsh-cj-meta-list' },
+              h('div', null, h('span', null, t('currentStreak')), h('strong', null, heatmap.currentStreak)),
+              h('div', null, h('span', null, t('avgPerDay')), h('strong', null, heatmap.avg)),
+              h('div', null,
+                h('span', null, t('peakOn')),
+                h('strong', null, data.stats.maxDayDate || '—')
+              ),
+              h('div', null,
+                h('span', null, t('maxDay')),
+                h('strong', null, data.stats.maxDayCount)
               )
             )
           )
         ),
-        day && h('div', { className: 'dsh-cj-drawer' },
-          h('div', { className: 'dsh-cj-row dsh-cj-row-end' },
-            h('strong', null, day),
-            h(Btn, { onClick: () => setDay(null) }, '×')
+        h('p', { className: 'dsh-cj-footnote' }, t('activityFootnote')),
+        day && h('aside', {
+          className: 'dsh-cj-drawer',
+          role: 'complementary',
+          'aria-label': day
+        },
+          h('div', { className: 'dsh-cj-drawer-head' },
+            h('div', { className: 'dsh-cj-drawer-title' },
+              h('strong', null, formatDayTitle(day)),
+              h('span', null,
+                day + ' · ' + (dayLoading ? t('dayLoading') : fillMsg(t('dayCommits'), { n: dayItems.length }))
+              )
+            ),
+            h(Btn, {
+              icon: IconClose ? h(IconClose) : null,
+              onClick: () => setDay(null)
+            }, IconClose ? null : '×')
           ),
-          dayItems.map((c, i) =>
-            h('div', { className: 'dsh-cj-commit', key: i },
-              h('div', { className: 'dsh-cj-muted' }, (c.time || '').slice(11, 16) + ' · ' + c.repo),
-              h('div', null, c.title),
-              c.webUrl
-                ? h('a', { className: 'dsh-cj-link', href: c.webUrl, target: '_blank', rel: 'noreferrer' }, c.sha)
-                : h('span', { className: 'dsh-cj-muted' }, c.sha)
-            )
+          h('div', { className: 'dsh-cj-drawer-body' },
+            dayLoading
+              ? h('p', { className: 'dsh-cj-muted' }, '…')
+              : (dayItems.length
+                ? dayItems.map((c, i) =>
+                    h('div', { className: 'dsh-cj-commit', key: c.id || i },
+                      h('div', { className: 'dsh-cj-commit-head' },
+                        h('span', null, (c.time || '').slice(11, 16) || '—'),
+                        h('span', { className: 'dsh-cj-commit-repo', title: c.repo }, shortRepoLabel(c.repo))
+                      ),
+                      h('div', { className: 'dsh-cj-commit-title' }, c.title),
+                      h('div', { className: 'dsh-cj-commit-meta' },
+                        h('span', { className: 'dsh-cj-commit-sha' }, c.sha),
+                        h('span', null, c.authorName || ''),
+                        c.webUrl
+                          ? h(Btn, {
+                              icon: IconLink ? h(IconLink) : null,
+                              onClick: () => {
+                                try { window.open(c.webUrl, '_blank', 'noopener,noreferrer') } catch { /* ignore */ }
+                              }
+                            }, t('openRepo'))
+                          : null
+                      )
+                    )
+                  )
+                : h('p', { className: 'dsh-cj-muted' }, t('dayEmpty')))
           )
         )
       )
     }
 
-    function LogsPage({ t, accountId, busy, setBusy, setError }) {
+    function LogsPage({ t, accountId, busy, setBusy, notify }) {
       const [items, setItems] = useState([])
       const [total, setTotal] = useState(0)
+      const [page, setPage] = useState(1)
+      const [pageSize, setPageSize] = useState(10)
 
-      const load = useCallback(async () => {
+      const load = useCallback(async (nextPage, nextSize) => {
         if (!accountId) return
-        const data = await api('/api/logs?accountId=' + encodeURIComponent(accountId) + '&limit=100')
+        const size = nextSize || pageSize
+        const p = nextPage || page
+        const q = new URLSearchParams({
+          accountId,
+          limit: String(size),
+          offset: String((p - 1) * size)
+        })
+        const data = await api('/api/logs?' + q.toString())
         setItems(data.items || [])
         setTotal(data.total || 0)
-      }, [accountId])
+        setPage(p)
+        if (nextSize) setPageSize(size)
+      }, [accountId, page, pageSize])
 
-      useEffect(() => { load().catch((e) => setError(e.message || String(e))) }, [load, setError])
+      useEffect(() => {
+        if (!accountId) return
+        load(1).catch((e) => notify(e.message || String(e), 'error'))
+      }, [accountId]) // eslint-disable-line
 
-      if (!accountId) return h('p', { className: 'dsh-cj-muted' }, t('emptyAccount'))
+      if (!accountId) {
+        return h('div', { className: 'dsh-cj-page-fill' },
+          h(PageHead, { desc: t('descLogs') }),
+          h('p', { className: 'dsh-cj-muted' }, t('emptyAccount'))
+        )
+      }
 
-      return h(React.Fragment, null,
+      return h('div', { className: 'dsh-cj-page-fill' },
+        h(PageHead, { desc: t('descLogs') }),
         h('div', { className: 'dsh-cj-row' },
-          h(Btn, { disabled: busy, onClick: () => load().catch((e) => setError(e.message || String(e))) }, t('refresh')),
+          h(Btn, {
+            disabled: busy,
+            icon: IconRefresh ? h(IconRefresh) : null,
+            onClick: () => {
+              setBusy(true)
+              load(1)
+                .then(() => notify(t('refreshOk'), 'success'))
+                .catch((e) => notify(e.message || String(e), 'error'))
+                .finally(() => setBusy(false))
+            }
+          }, t('refresh')),
           h(Btn, {
             danger: true, disabled: busy,
+            icon: IconTrash ? h(IconTrash) : null,
             onClick: async () => {
               if (!confirm(t('confirmClearLogs'))) return
-              setBusy(true); setError('')
+              setBusy(true)
               try {
                 await api('/api/logs?accountId=' + encodeURIComponent(accountId), { method: 'DELETE' })
-                await load()
-              } catch (e) { setError(e.message || String(e)) }
+                await load(1)
+                notify(t('clearOk'), 'success')
+              } catch (e) { notify(e.message || String(e), 'error') }
               finally { setBusy(false) }
             }
-          }, t('clearLogs')),
-          h('span', { className: 'dsh-cj-muted' }, total)
+          }, t('clearLogs'))
         ),
         h('div', { className: 'dsh-cj-table-wrap' },
           h('table', { className: 'dsh-cj-table' },
@@ -926,17 +2348,32 @@ window.__ModuleLoader__.load({
             )),
             h('tbody', null, items.map((l) =>
               h('tr', { key: l.id },
-                h('td', null, l.level),
+                h('td', null, logLevelTag(t, l.level)),
                 h('td', null, (l.at || '').replace('T', ' ').slice(0, 19)),
                 h('td', null, l.message)
               )
             ))
           )
-        )
+        ),
+        h(TablePager, {
+          t,
+          total,
+          page,
+          pageSize,
+          busy,
+          onPageChange: (p) => {
+            setBusy(true)
+            load(p).catch((e) => notify(e.message || String(e), 'error')).finally(() => setBusy(false))
+          },
+          onPageSizeChange: (size) => {
+            setBusy(true)
+            load(1, size).catch((e) => notify(e.message || String(e), 'error')).finally(() => setBusy(false))
+          }
+        })
       )
     }
 
-    function SettingsPage({ t, busy, setBusy, setError }) {
+    function SettingsPage({ t, busy, setBusy, notify }) {
       const [form, setForm] = useState({
         syncIntervalMinutes: 30,
         syncLookbackDays: 90,
@@ -948,45 +2385,73 @@ window.__ModuleLoader__.load({
           syncIntervalMinutes: s.syncIntervalMinutes,
           syncLookbackDays: s.syncLookbackDays,
           exportsPath: s.exportsPath || ''
-        })).catch((e) => setError(e.message || String(e)))
-      }, [setError])
+        })).catch((e) => notify(e.message || String(e), 'error'))
+      }, [notify])
 
-      return h(React.Fragment, null,
+      return h('div', { className: 'dsh-cj-page-scroll' },
+        h(PageHead, { desc: t('descSettings') }),
+        h('h3', {
+          className: 'dsh-cj-page-title',
+          style: { fontSize: 14, marginBottom: 10 }
+        }, t('syncSettingsTitle')),
         h('div', { className: 'dsh-cj-field' },
           h('label', { className: 'dsh-cj-label' }, t('syncInterval')),
-          h('input', {
-            className: 'dsh-cj-input', type: 'number', min: 5,
+          h(FieldInput, {
+            type: 'number', min: 5,
             value: form.syncIntervalMinutes,
             onChange: (e) => setForm({ ...form, syncIntervalMinutes: Number(e.target.value) })
           })
         ),
         h('div', { className: 'dsh-cj-field' },
           h('label', { className: 'dsh-cj-label' }, t('lookback')),
-          h('input', {
-            className: 'dsh-cj-input', type: 'number', min: 1,
+          h(FieldInput, {
+            type: 'number', min: 1,
             value: form.syncLookbackDays,
             onChange: (e) => setForm({ ...form, syncLookbackDays: Number(e.target.value) })
           })
         ),
         h('div', { className: 'dsh-cj-field' },
           h('label', { className: 'dsh-cj-label' }, t('exportsPath')),
-          h('input', {
-            className: 'dsh-cj-input',
+          h(FieldInput, {
             value: form.exportsPath,
+            placeholder: '~/.dsh-commit-journal/exports',
             onChange: (e) => setForm({ ...form, exportsPath: e.target.value })
-          })
+          }),
+          h('div', { className: 'dsh-cj-muted' }, t('exportsPathHint'))
         ),
         h(Btn, {
           primary: true, disabled: busy,
+          icon: IconSave ? h(IconSave) : null,
           onClick: async () => {
-            setBusy(true); setError('')
+            setBusy(true)
             try {
               await api('/api/settings', { method: 'PUT', body: JSON.stringify(form) })
-            } catch (e) { setError(e.message || String(e)) }
+              notify(t('saveOk'), 'success')
+            } catch (e) { notify(e.message || String(e), 'error') }
             finally { setBusy(false) }
           }
         }, t('save'))
       )
+    }
+
+    function detectScheme() {
+      const el = document.documentElement
+      const attr = (el.getAttribute('data-theme') || el.getAttribute('data-color-scheme') || el.className || '').toLowerCase()
+      if (attr.includes('dark')) return 'dark'
+      if (attr.includes('light')) return 'light'
+      const bg = getComputedStyle(el).getPropertyValue('--dsw-alias-bg-base').trim()
+      const hex = bg.match(/#([0-9a-f]{6})/i)
+      if (hex) {
+        const n = parseInt(hex[1], 16)
+        const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+        return (r * 299 + g * 587 + b * 114) / 1000 < 128 ? 'dark' : 'light'
+      }
+      const rgb = bg.match(/rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i)
+      if (rgb) {
+        const r = Number(rgb[1]), g = Number(rgb[2]), b = Number(rgb[3])
+        return (r * 299 + g * 587 + b * 114) / 1000 < 128 ? 'dark' : 'light'
+      }
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
     }
 
     function App({ t }) {
@@ -994,7 +2459,14 @@ window.__ModuleLoader__.load({
       const [accounts, setAccounts] = useState([])
       const [activeId, setActiveId] = useState(null)
       const [busy, setBusy] = useState(false)
-      const [error, setError] = useState('')
+      const [scheme, setScheme] = useState('light')
+      const [notice, setNotice] = useState(null)
+      const noticeSeq = React.useRef(0)
+
+      const notify = useCallback((text, tone) => {
+        noticeSeq.current += 1
+        setNotice({ id: noticeSeq.current, text: String(text || ''), tone: tone === 'success' ? 'success' : 'error' })
+      }, [])
 
       const refreshAccounts = useCallback(async () => {
         const data = await api('/api/accounts')
@@ -1003,10 +2475,31 @@ window.__ModuleLoader__.load({
       }, [])
 
       useEffect(() => {
-        refreshAccounts().catch((e) => setError(e.message || String(e)))
-      }, [refreshAccounts])
+        refreshAccounts().catch((e) => notify(e.message || String(e), 'error'))
+      }, [refreshAccounts, notify])
 
-      return h('div', { className: 'dsh-cj-root' },
+      useEffect(() => {
+        const sync = () => setScheme(detectScheme())
+        sync()
+        const mo = new MutationObserver(sync)
+        mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-color-scheme', 'class'] })
+        const mq = window.matchMedia('(prefers-color-scheme: dark)')
+        if (mq.addEventListener) mq.addEventListener('change', sync)
+        else if (mq.addListener) mq.addListener(sync)
+        return () => {
+          mo.disconnect()
+          if (mq.removeEventListener) mq.removeEventListener('change', sync)
+          else if (mq.removeListener) mq.removeListener(sync)
+        }
+      }, [])
+
+      useEffect(() => {
+        if (!notice) return undefined
+        const timer = setTimeout(() => setNotice(null), notice.tone === 'error' ? 4500 : 3000)
+        return () => clearTimeout(timer)
+      }, [notice])
+
+      return h('div', { className: 'dsh-cj-root', 'data-scheme': scheme },
         h('style', null, CSS),
         h('div', { className: 'dsh-cj-tabs', role: 'tablist' },
           TABS.map((item) =>
@@ -1022,16 +2515,18 @@ window.__ModuleLoader__.load({
           )
         ),
         h('div', { className: 'dsh-cj-body' },
-          error ? h('p', { className: 'dsh-cj-error' }, error) : null,
+          notice
+            ? h('div', { className: 'dsh-cj-notice', 'data-tone': notice.tone, key: notice.id }, notice.text)
+            : null,
           tab === 'accounts' && h(AccountsPage, {
-            t, accounts, activeId, busy, setBusy, setError,
+            t, accounts, activeId, busy, setBusy, notify,
             onChanged: refreshAccounts
           }),
-          tab === 'repos' && h(ReposPage, { t, accountId: activeId, busy, setBusy, setError }),
-          tab === 'commits' && h(CommitsPage, { t, accountId: activeId, busy, setBusy, setError }),
-          tab === 'activity' && h(ActivityPage, { t, accountId: activeId, setError }),
-          tab === 'logs' && h(LogsPage, { t, accountId: activeId, busy, setBusy, setError }),
-          tab === 'settings' && h(SettingsPage, { t, busy, setBusy, setError })
+          tab === 'repos' && h(ReposPage, { t, accountId: activeId, busy, setBusy, notify }),
+          tab === 'commits' && h(CommitsPage, { t, accountId: activeId, busy, setBusy, notify }),
+          tab === 'activity' && h(ActivityPage, { t, accountId: activeId, notify }),
+          tab === 'logs' && h(LogsPage, { t, accountId: activeId, busy, setBusy, notify }),
+          tab === 'settings' && h(SettingsPage, { t, busy, setBusy, notify })
         )
       )
     }

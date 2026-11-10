@@ -10,6 +10,7 @@ import {
   updateAccount
 } from '../core/accounts.js'
 import { db } from '../core/db.js'
+import { shortRepoPath } from '../core/repoDisplay.js'
 import { describeSettings, getUiPort, updateSettings } from '../core/settings.js'
 import { getDataRoot } from '../core/paths.js'
 import { syncAccount } from '../core/sync.js'
@@ -205,19 +206,43 @@ async function handler(req: IncomingMessage, res: ServerResponse): Promise<void>
         accountId,
         watchedRepoIds: account.watchedRepoIds,
         repoBranches: account.repoBranches,
-        repos: list.map((r) => ({
-          id: r.id,
-          name: r.name,
-          fullName: r.fullName,
-          webUrl: r.webUrl,
-          defaultBranch: r.defaultBranch,
-          lastActivityAt: r.lastActivityAt,
-          participating: r.participating,
-          watched: account.watchedRepoIds.length === 0 || account.watchedRepoIds.includes(r.id),
-          branchOverride: account.repoBranches[r.id] || ''
-        }))
+        repos: list.map((r) => {
+          const displayName = shortRepoPath(r.fullName || r.name, account.organizationId)
+          return {
+            id: r.id,
+            name: r.name,
+            fullName: displayName,
+            displayName,
+            webUrl: r.webUrl,
+            defaultBranch: r.defaultBranch,
+            lastActivityAt: r.lastActivityAt,
+            participating: r.participating,
+            watched: account.watchedRepoIds.length === 0 || account.watchedRepoIds.includes(r.id),
+            branchOverride: account.repoBranches[r.id] || ''
+          }
+        })
       })
       return
+    }
+
+    {
+      const m = matchRoute(url.pathname, '/api/repos/:id/branches')
+      if (m && method === 'GET') {
+        const accountId = url.searchParams.get('accountId') || getActiveAccountId() || ''
+        const account = getAccount(accountId)
+        if (!account) return sendJson(res, 404, { error: '账号不存在' })
+        const token = getAccountToken(accountId)
+        const branches = await getProvider(account).listBranches(account, token, m.id)
+        sendJson(res, 200, {
+          repoId: m.id,
+          branches: branches.map((b) => ({
+            name: b.name,
+            defaultBranch: b.defaultBranch,
+            protected: b.protected
+          }))
+        })
+        return
+      }
     }
 
     if (method === 'POST' && url.pathname === '/api/repos/refresh') {
