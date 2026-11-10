@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1
+
+- Fix Desktop web boot: ship `client.js` as `__ModuleLoader__` CJS factory (not ESM)
+- Sidebar panel embeds local heatmap UI; align `dsh.client.inject` with locale/layout/sidebar
+
 ## 0.1.0
 
 - Initial open-source release as a DeepSeek Harness (`dsh`) plugin

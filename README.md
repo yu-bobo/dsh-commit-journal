@@ -92,6 +92,11 @@ npm run build
 npm run typecheck
 ```
 
+本地 link 到 desktop profile 后**必须重启 DSH**。浏览器侧 `client.js` 必须是
+`window.__ModuleLoader__.load({ id, factory })` 的 CJS 闭包格式（不要打成带
+`import` 的 ESM），否则 Desktop 会报 `Cannot use import statement outside a module`
+并阻断 web boot。
+
 ## License
 
 MIT
