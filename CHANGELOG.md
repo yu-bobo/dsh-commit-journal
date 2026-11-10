@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+- Native horizontal tabs: Accounts / Repos / Commits / Activity / Logs / Settings
+- DSH dual-theme via `--dsw-alias-*` tokens; no top bar (activate account on Accounts tab)
+- Expand local UI HTTP API for panel CRUD; remove standalone heatmap HTML page
+
 ## 0.1.1
 
 - Fix Desktop web boot: ship `client.js` as `__ModuleLoader__` CJS factory (not ESM)

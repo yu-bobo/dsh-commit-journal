@@ -9,7 +9,7 @@ export const name = 'commit-journal'
 export const inject = ['tools']
 
 /**
- * Commit Journal dsh 插件：同步 VCS 提交、报告材料与活跃热力图
+ * Commit Journal dsh 插件：同步 VCS 提交与活跃热力图面板
  */
 export function apply(ctx: Context) {
   ensureDataLayout()
@@ -18,8 +18,7 @@ export function apply(ctx: Context) {
   ctx.tools.register(
     defineTool({
       name: 'open_activity_heatmap',
-      description:
-        '返回本机活跃热力图 Web UI 地址（GitHub 风格方格）。用户可在浏览器打开查看。',
+      description: '返回本机 Commit Journal API 基址（侧栏面板数据源）。',
       parameters: {},
       output: {
         schema: { type: 'string' },
@@ -27,34 +26,19 @@ export function apply(ctx: Context) {
       },
       async execute() {
         const url = await startUiServer()
-        return JSON.stringify(
-          {
-            url,
-            dataRoot: getDataRoot(),
-            hint: '在浏览器打开该地址查看热力图；可在页面内切换账号/年份并同步提交。'
-          },
-          null,
-          2
-        )
+        return JSON.stringify({ url, dataRoot: getDataRoot() }, null, 2)
       }
     })
   )
 
   ctx.effect(() => {
-    void startUiServer()
-      .then((url) => {
-        ctx.logger?.info?.(`[commit-journal] heatmap UI: ${url}`)
-        ctx.logger?.info?.(`[commit-journal] data root: ${getDataRoot()}`)
-      })
-      .catch((e) => {
-        ctx.logger?.warn?.(
-          `[commit-journal] heatmap UI failed to start: ${e?.message || e}`
-        )
-      })
+    void startUiServer().catch((e) => {
+      ctx.logger?.warn?.(`[commit-journal] ui server: ${e?.message || e}`)
+    })
     try {
       rescheduleAll()
     } catch {
-      // ignore empty schedule
+      // ignore
     }
     return () => {
       stopAllSchedules()

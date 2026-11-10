@@ -1,6 +1,7 @@
 node_modules/
 lib/
 dist/
+.smoke-data/
 *.tsbuildinfo
 .DS_Store
 *.log

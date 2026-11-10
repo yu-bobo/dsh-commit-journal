@@ -308,6 +308,18 @@ export const db = {
     return { items: all.slice(offset, offset + limit), total: all.length }
   },
 
+  // 清除同步日志；不传 accountId 时清空全部
+  clearSyncLogs(accountId?: string): number {
+    const data = load()
+    const before = data.syncLogs.length
+    data.syncLogs = accountId
+      ? data.syncLogs.filter((l) => l.accountId !== accountId)
+      : []
+    const deleted = before - data.syncLogs.length
+    if (deleted > 0) save(data)
+    return deleted
+  },
+
   deleteAccountData(accountId: string): void {
     const data = load()
     data.repos = data.repos.filter((r) => r.accountId !== accountId)
