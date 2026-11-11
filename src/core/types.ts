@@ -2,7 +2,7 @@ export type VcsProviderId = 'codeup' | 'gitlab' | 'github' | 'local'
 
 export type OrgEdition = 'central' | 'region'
 
-// remote = Codeup API；local = 扫描本机 git 根目录
+// remote = Codeup / GitLab / GitHub API；local = 扫描本机 git 根目录
 export type AccountMode = 'local' | 'remote'
 
 export interface Account {
@@ -10,14 +10,16 @@ export interface Account {
   name: string
   mode: AccountMode
   provider: VcsProviderId
-  // Codeup: central | region
+  // Codeup: central | region（GitLab / GitHub 忽略）
   edition?: OrgEdition
-  // Codeup central organization id
+  // Codeup central organization id；GitHub 可选 org login；GitLab 可选 group path/id
   organizationId?: string
-  // Codeup region / GitLab / GitHub Enterprise API base
+  // Codeup region / 自建 GitLab / GHE API base（GitHub.com / gitlab.com 可留空）
   apiBaseUrl?: string
   // local 模式：扫描根目录（绝对或可解析路径）
   localRoots?: string[]
+  // 跳过 TLS 证书校验（公司代理 / 自签证书）；也可用环境变量 DSH_COMMIT_JOURNAL_TLS_INSECURE=1
+  insecureSsl?: boolean
   // Author filter (email or name, compared lowercased)
   authorFilters: string[]
   defaultBranch: string
@@ -37,6 +39,7 @@ export interface AccountInput {
   organizationId?: string
   apiBaseUrl?: string
   localRoots?: string[]
+  insecureSsl?: boolean
   // remote 必填；local 可省略
   token?: string
   authorFilters?: string[]

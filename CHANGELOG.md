@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Providers: GitLab (incl. self-hosted) and GitHub / GitHub Enterprise adapters (GitLab pending live verification; GitHub tested)
+- Accounts: remote provider picker (codeup | gitlab | github); optional org/group filter; apiBaseUrl defaults for gitlab.com / github.com
+- TLS: clearer fetch/cert errors; auto-retry on cert failure; per-account `insecureSsl` (and env `DSH_COMMIT_JOURNAL_TLS_INSECURE`)
+- Panel: wider account modal (2-col), compact icon actions, local mode default; branch API via `repoId` query
+- Agent tools: provider-specific fields and copy; roadmap notes verification status
+
 ## 0.2.0
 
 - Accounts: per-account `mode` — `remote` (Codeup PAT) or `local` (scan `localRoots` for `.git`)

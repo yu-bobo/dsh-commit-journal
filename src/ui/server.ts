@@ -60,6 +60,7 @@ function accountPublic(a: ReturnType<typeof listAccounts>[number], activeId: str
     edition: a.edition,
     organizationId: a.organizationId,
     apiBaseUrl: a.apiBaseUrl,
+    insecureSsl: Boolean(a.insecureSsl),
     localRoots: a.localRoots || [],
     authorFilters: a.authorFilters,
     defaultBranch: a.defaultBranch,
@@ -126,6 +127,7 @@ async function handler(req: IncomingMessage, res: ServerResponse): Promise<void>
         edition: body.edition || 'central',
         organizationId: body.organizationId,
         apiBaseUrl: body.apiBaseUrl,
+        insecureSsl: body.insecureSsl,
         localRoots: Array.isArray(body.localRoots)
           ? body.localRoots
           : typeof body.localRootsText === 'string'
@@ -163,6 +165,7 @@ async function handler(req: IncomingMessage, res: ServerResponse): Promise<void>
             edition: body.edition,
             organizationId: body.organizationId,
             apiBaseUrl: body.apiBaseUrl,
+            insecureSsl: body.insecureSsl,
             localRoots: Array.isArray(body.localRoots)
               ? body.localRoots
               : typeof body.localRootsText === 'string'
@@ -240,16 +243,38 @@ async function handler(req: IncomingMessage, res: ServerResponse): Promise<void>
       return
     }
 
+    // 分支列表：优先 query repoId（兼容 GitHub owner/repo）；旧路径 /api/repos/:id/branches 仍可用
+    if (method === 'GET' && url.pathname === '/api/repo-branches') {
+      const accountId = url.searchParams.get('accountId') || getActiveAccountId() || ''
+      const repoId = String(url.searchParams.get('repoId') || '').trim()
+      const account = getAccount(accountId)
+      if (!account) return sendJson(res, 404, { error: '账号不存在' })
+      if (!repoId) return sendJson(res, 400, { error: '缺少 repoId' })
+      const token = getAccountToken(accountId)
+      const branches = await getProvider(account).listBranches(account, token, repoId)
+      sendJson(res, 200, {
+        repoId,
+        branches: branches.map((b) => ({
+          name: b.name,
+          defaultBranch: b.defaultBranch,
+          protected: b.protected
+        }))
+      })
+      return
+    }
+
     {
-      const m = matchRoute(url.pathname, '/api/repos/:id/branches')
-      if (m && method === 'GET') {
+      // 兼容旧客户端；id 可能含 %2F（GitHub owner/repo）
+      const branchPath = url.pathname.match(/^\/api\/repos\/(.+)\/branches\/?$/)
+      if (branchPath && method === 'GET') {
         const accountId = url.searchParams.get('accountId') || getActiveAccountId() || ''
+        const repoId = decodeURIComponent(branchPath[1])
         const account = getAccount(accountId)
         if (!account) return sendJson(res, 404, { error: '账号不存在' })
         const token = getAccountToken(accountId)
-        const branches = await getProvider(account).listBranches(account, token, m.id)
+        const branches = await getProvider(account).listBranches(account, token, repoId)
         sendJson(res, 200, {
-          repoId: m.id,
+          repoId,
           branches: branches.map((b) => ({
             name: b.name,
             defaultBranch: b.defaultBranch,

@@ -77,12 +77,16 @@ window.__ModuleLoader__.load({
         clearCommits: 'Reset local commits',
         clearLogs: 'Clear logs',
         accountMode: 'Mode',
-        modeRemote: 'Remote pull (Codeup)',
+        modeRemote: 'Remote pull',
         modeLocal: 'Local scan (git)',
         modeRemoteShort: 'Remote',
         modeLocalShort: 'Local',
-        modeHintRemote: 'Uses Yunxiao PAT to pull commits from Codeup.',
+        modeHintRemote: 'Pull commits via provider API with a personal access token.',
         modeHintLocal: 'Scans git repos under the folders you list — no token needed.',
+        provider: 'Provider',
+        providerCodeup: 'Codeup (Yunxiao)',
+        providerGitlab: 'GitLab',
+        providerGithub: 'GitHub / GHE',
         localRoots: 'Scan roots',
         localRootsPh: 'One absolute path per line\ne.g. F:\\Personal\\projects',
         localRootsHint: 'Recursively find .git under each root (depth ≤ 5).',
@@ -96,14 +100,28 @@ window.__ModuleLoader__.load({
         org: 'Organization / API',
         orgId: 'organizationId',
         orgIdPh: 'Org ID from Yunxiao org admin → Basic info',
+        orgIdPhGithub: 'Org or user login (e.g. yu-bobo); empty = all token-visible repos',
+        orgIdPhGitlab: 'Optional group path/id; empty = membership projects',
+        orgIdLabelGithub: 'Org / user (optional)',
+        orgIdLabelGitlab: 'Group (optional)',
         apiBase: 'API Base URL',
         apiBasePh: 'e.g. https://xxx.devops.aliyuncs.com',
+        apiBasePhGithub: 'Leave empty for github.com; GHE e.g. https://github.example.com',
+        apiBasePhGitlab: 'Leave empty for gitlab.com; self-hosted e.g. https://gitlab.example.com',
+        apiBaseHintGithub: 'Empty → api.github.com; Enterprise Server host gets /api/v3 appended if missing.',
+        apiBaseHintGitlab: 'Empty → gitlab.com/api/v4; self-hosted host gets /api/v4 appended if missing.',
         authors: 'Author filters',
         authorsHint: 'Email or name, comma-separated; empty = no filter',
         authorsPh: 'you@example.com, Alice',
         token: 'Personal access token',
         tokenPh: 'Yunxiao → Personal settings → Personal access token',
+        tokenPhGithub:
+          'Avatar → Settings → Developer settings → Personal access tokens → Fine-grained or Tokens (classic)',
+        tokenPhGitlab: 'GitLab → Preferences → Access tokens (read_api / read_repository)',
         tokenPhEdit: 'Leave blank to keep unchanged',
+        insecureSsl: 'Skip TLS certificate verification',
+        insecureSslHint:
+          'Use for corporate HTTPS proxy or self-signed certs (e.g. GitHub fetch failed / UNABLE_TO_VERIFY_LEAF_SIGNATURE). Less safe.',
         defaultBranch: 'Default sync branch',
         defaultBranchPh: 'master / main / develop',
         watched: 'Watched',
@@ -174,7 +192,7 @@ window.__ModuleLoader__.load({
         filterWatched: 'Watched',
         filterUnwatched: 'Unwatched',
         descAccounts:
-          'Each account is remote (Codeup PAT) or local (scan roots). Switch the active account to change which data other tabs use.',
+          'Each account is remote (Codeup / GitLab / GitHub PAT) or local (scan roots). Switch the active account to change which data other tabs use.',
         descRepos:
           '“Sync watched” pulls all watched repos; each row can sync alone. With nothing watched, full sync covers every visible repo.',
         descReposLocal:
@@ -216,12 +234,16 @@ window.__ModuleLoader__.load({
         clearCommits: '重置本地提交',
         clearLogs: '清除日志',
         accountMode: '模式',
-        modeRemote: '远程拉取（Codeup）',
+        modeRemote: '远程拉取',
         modeLocal: '本地扫描（git）',
         modeRemoteShort: '远程',
         modeLocalShort: '本地',
-        modeHintRemote: '使用云效个人访问令牌，从 Codeup 拉取提交。',
+        modeHintRemote: '使用对应平台的个人访问令牌，经 API 拉取提交。',
         modeHintLocal: '扫描下方根目录中的本机 git 仓库，无需令牌。',
+        provider: '平台',
+        providerCodeup: 'Codeup（云效）',
+        providerGitlab: 'GitLab',
+        providerGithub: 'GitHub / 企业版',
         localRoots: '扫描根目录',
         localRootsPh: '每行一个绝对路径\n例如 F:\\Personal\\projects',
         localRootsHint: '在各根目录下递归查找 .git（深度 ≤ 5）。',
@@ -235,14 +257,28 @@ window.__ModuleLoader__.load({
         org: '组织 / 接入点',
         orgId: 'organizationId',
         orgIdPh: '组织管理后台 → 基本信息里的组织 ID',
+        orgIdPhGithub: '组织或用户 login（如 yu-bobo）；留空=令牌可见全部仓库',
+        orgIdPhGitlab: '可选 group 路径/ID；留空列出 membership 项目',
+        orgIdLabelGithub: '组织 / 用户（可选）',
+        orgIdLabelGitlab: 'Group（可选）',
         apiBase: 'API Base URL',
         apiBasePh: '实例访问域名，如 https://xxx.devops.aliyuncs.com',
+        apiBasePhGithub: 'github.com 可留空；GHE 如 https://github.example.com',
+        apiBasePhGitlab: 'gitlab.com 可留空；自建如 https://gitlab.example.com',
+        apiBaseHintGithub: '留空 → api.github.com；企业版主机缺 /api/v3 时会自动补。',
+        apiBaseHintGitlab: '留空 → gitlab.com/api/v4；自建主机缺 /api/v4 时会自动补。',
         authors: '作者过滤',
         authorsHint: '邮箱或姓名，逗号分隔；留空不过滤',
         authorsPh: 'you@example.com, 张三',
         token: '个人访问令牌',
         tokenPh: '云效个人设置 → 个人访问令牌',
+        tokenPhGithub:
+          '头像 → Settings → Developer settings → Personal access tokens → Fine-grained 或 Tokens (classic)',
+        tokenPhGitlab: 'GitLab → Preferences → Access tokens（read_api / read_repository）',
         tokenPhEdit: '留空则不修改',
+        insecureSsl: '跳过 TLS 证书校验',
+        insecureSslHint:
+          '公司代理 / HTTPS 解密 / 自签证书导致 fetch failed（如 UNABLE_TO_VERIFY_LEAF_SIGNATURE）时可勾选；安全性较低。',
         defaultBranch: '默认同步分支',
         defaultBranchPh: 'master / main / develop',
         watched: '关注',
@@ -313,7 +349,7 @@ window.__ModuleLoader__.load({
         filterWatched: '已关注',
         filterUnwatched: '未关注',
         descAccounts:
-          '每个账号可选远程（云效 PAT）或本地（扫描根目录）。切换当前账号后，其它页签使用该账号数据。',
+          '每个账号可选远程（Codeup / GitLab / GitHub PAT）或本地（扫描根目录）。切换当前账号后，其它页签使用该账号数据。',
         descRepos:
           '「同步关注」拉取全部关注仓；单行可单独同步。未关注任何仓库时全量同步会覆盖全部可见仓。',
         descReposLocal:
@@ -431,6 +467,28 @@ window.__ModuleLoader__.load({
       }
       .dsh-cj-row-end { justify-content: space-between; }
       .dsh-cj-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+      .dsh-cj-table .dsh-cj-actions {
+        flex-wrap: nowrap;
+        gap: 6px;
+        justify-content: flex-end;
+      }
+      .dsh-cj-td-actions {
+        white-space: nowrap;
+        width: 1%;
+        vertical-align: middle !important;
+      }
+      .dsh-cj-td-clip {
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .dsh-cj-btn-icon.dsh-cj-btn-sized,
+      .dsh-cj-btn.dsh-cj-btn-icon {
+        padding: 0 8px !important;
+        min-width: 32px;
+        justify-content: center !important;
+      }
       /* Size only — do not override official Button primary/outline colors */
       .dsh-cj-btn-sized {
         box-sizing: border-box !important;
@@ -604,15 +662,45 @@ window.__ModuleLoader__.load({
         resize: vertical;
         outline: none;
       }
+      /* dimmed 太浅；用 secondary 并取消 Firefox 默认降低透明度 */
       .dsh-cj-textarea::placeholder,
       .dsh-cj-input::placeholder {
-        color: var(--dsw-alias-label-dimmed);
+        color: var(--dsw-alias-label-secondary, #737373);
+        opacity: 1;
       }
       /* Official Input wrapper also lands at 32px */
       .dsh-cj-row > span {
         vertical-align: middle;
       }
-      .dsh-cj-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+      .dsh-cj-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+      .dsh-cj-account-form {
+        width: min(640px, calc(100vw - 48px));
+        max-width: 100%;
+      }
+      .dsh-cj-form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0 12px;
+        align-items: start;
+      }
+      .dsh-cj-form-span {
+        grid-column: 1 / -1;
+      }
+      .dsh-cj-field-check {
+        margin-top: 2px;
+      }
+      .dsh-cj-field-check .dsh-cj-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 400;
+        cursor: pointer;
+        user-select: none;
+      }
+      @media (max-width: 560px) {
+        .dsh-cj-form-row { grid-template-columns: 1fr; }
+        .dsh-cj-account-form { width: 100%; }
+      }
       /* 官方 Input 外层是 inline-flex + align-items:center；拉满宽度时不能改成 block，否则 placeholder 不垂直居中 */
       .dsh-cj-field > span {
         display: inline-flex;
@@ -734,6 +822,9 @@ window.__ModuleLoader__.load({
         max-height: 100%;
         overflow: auto;
         box-shadow: var(--dsw-elevation-prominent, none);
+      }
+      .dsh-cj-modal-wide {
+        width: min(680px, 100%);
       }
       .dsh-cj-modal h3 { margin: 0 0 12px; font-size: 15px; }
       .dsh-cj-stats {
@@ -1404,6 +1495,13 @@ window.__ModuleLoader__.load({
       return mode === 'local' ? t('modeLocalShort') : t('modeRemoteShort')
     }
 
+    function providerLabel(t, provider) {
+      if (provider === 'gitlab') return t('providerGitlab')
+      if (provider === 'github') return t('providerGithub')
+      if (provider === 'local') return t('modeLocalShort')
+      return t('providerCodeup')
+    }
+
     function accountOrgCell(a) {
       if (a.mode === 'local') {
         const roots = a.localRoots || []
@@ -1413,105 +1511,189 @@ window.__ModuleLoader__.load({
       return a.organizationId || a.apiBaseUrl || '-'
     }
 
-    function AccountModal({ open, title, form, setForm, busy, onClose, onSave, t, mode }) {
-      const isLocal = form.accountMode === 'local'
-      const body = h(React.Fragment, null,
-        h('div', { className: 'dsh-cj-field' },
-          h('label', { className: 'dsh-cj-label' }, t('name')),
+    function remoteProviderFields(form, setForm, t, mode) {
+      const provider = form.provider || 'codeup'
+      const tokenPh =
+        mode === 'edit'
+          ? t('tokenPhEdit')
+          : provider === 'github'
+            ? t('tokenPhGithub')
+            : provider === 'gitlab'
+              ? t('tokenPhGitlab')
+              : t('tokenPh')
+
+      const providerField = h('div', { className: 'dsh-cj-field' },
+        h('label', { className: 'dsh-cj-label' }, t('provider')),
+        h(SelectField, {
+          value: provider,
+          style: { width: '100%' },
+          'aria-label': t('provider'),
+          options: [
+            { value: 'codeup', label: t('providerCodeup') },
+            { value: 'gitlab', label: t('providerGitlab') },
+            { value: 'github', label: t('providerGithub') }
+          ],
+          onChange: (v) => setForm({ ...form, provider: v })
+        })
+      )
+
+      const tokenRow = h(React.Fragment, null,
+        h('div', { className: 'dsh-cj-field dsh-cj-form-span' },
+          h('label', { className: 'dsh-cj-label' }, t('token')),
           h(FieldInput, {
-            value: form.name,
-            placeholder: t('namePh'),
-            onChange: (e) => setForm({ ...form, name: e.target.value }),
-            'data-modal-autofocus': true
+            type: 'password',
+            value: form.token,
+            placeholder: tokenPh,
+            title: tokenPh,
+            onChange: (e) => setForm({ ...form, token: e.target.value })
           })
         ),
-        h('div', { className: 'dsh-cj-field' },
-          h('label', { className: 'dsh-cj-label' }, t('accountMode')),
-          h(SelectField, {
-            value: form.accountMode || 'remote',
-            style: { width: '100%' },
-            'aria-label': t('accountMode'),
-            options: [
-              { value: 'remote', label: t('modeRemote') },
-              { value: 'local', label: t('modeLocal') }
-            ],
-            onChange: (v) => setForm({ ...form, accountMode: v })
-          }),
-          h('div', { className: 'dsh-cj-muted' },
-            isLocal ? t('modeHintLocal') : t('modeHintRemote')
+        h('div', { className: 'dsh-cj-field dsh-cj-field-check dsh-cj-form-span' },
+          h('label', { className: 'dsh-cj-label', title: t('insecureSslHint') },
+            h('input', {
+              type: 'checkbox',
+              checked: !!form.insecureSsl,
+              onChange: (e) => setForm({ ...form, insecureSsl: e.target.checked })
+            }),
+            t('insecureSsl')
+          )
+        )
+      )
+
+      if (provider === 'gitlab' || provider === 'github') {
+        return h(React.Fragment, null,
+          h('div', { className: 'dsh-cj-form-row' },
+            providerField,
+            h('div', { className: 'dsh-cj-field' },
+              h('label', { className: 'dsh-cj-label' },
+                provider === 'github' ? t('orgIdLabelGithub') : t('orgIdLabelGitlab')
+              ),
+              h(FieldInput, {
+                value: form.organizationId,
+                placeholder: provider === 'github' ? t('orgIdPhGithub') : t('orgIdPhGitlab'),
+                title: provider === 'github' ? t('orgIdPhGithub') : t('orgIdPhGitlab'),
+                onChange: (e) => setForm({ ...form, organizationId: e.target.value })
+              })
+            )
+          ),
+          h('div', { className: 'dsh-cj-form-row' },
+            h('div', { className: 'dsh-cj-field dsh-cj-form-span' },
+              h('label', { className: 'dsh-cj-label' }, t('apiBase')),
+              h(FieldInput, {
+                value: form.apiBaseUrl,
+                placeholder: provider === 'github' ? t('apiBasePhGithub') : t('apiBasePhGitlab'),
+                title: provider === 'github' ? t('apiBaseHintGithub') : t('apiBaseHintGitlab'),
+                onChange: (e) => setForm({ ...form, apiBaseUrl: e.target.value })
+              })
+            )
+          ),
+          h('div', { className: 'dsh-cj-form-row' }, tokenRow)
+        )
+      }
+
+      return h(React.Fragment, null,
+        h('div', { className: 'dsh-cj-form-row' },
+          providerField,
+          h('div', { className: 'dsh-cj-field' },
+            h('label', { className: 'dsh-cj-label' }, t('edition')),
+            h(SelectField, {
+              value: form.edition,
+              style: { width: '100%' },
+              'aria-label': t('edition'),
+              options: [
+                { value: 'central', label: t('editionCentral') },
+                { value: 'region', label: t('editionRegion') }
+              ],
+              onChange: (v) => setForm({ ...form, edition: v })
+            })
+          )
+        ),
+        h('div', { className: 'dsh-cj-form-row' },
+          form.edition === 'central'
+            ? h('div', { className: 'dsh-cj-field dsh-cj-form-span' },
+                h('label', { className: 'dsh-cj-label' }, t('orgId')),
+                h(FieldInput, {
+                  value: form.organizationId,
+                  placeholder: t('orgIdPh'),
+                  title: t('editionHintCentral'),
+                  onChange: (e) => setForm({ ...form, organizationId: e.target.value })
+                })
+              )
+            : h('div', { className: 'dsh-cj-field dsh-cj-form-span' },
+                h('label', { className: 'dsh-cj-label' }, t('apiBase')),
+                h(FieldInput, {
+                  value: form.apiBaseUrl,
+                  placeholder: t('apiBasePh'),
+                  title: t('editionHintRegion'),
+                  onChange: (e) => setForm({ ...form, apiBaseUrl: e.target.value })
+                })
+              )
+        ),
+        h('div', { className: 'dsh-cj-form-row' }, tokenRow)
+      )
+    }
+
+    function AccountModal({ open, title, form, setForm, busy, onClose, onSave, t, mode }) {
+      const isLocal = form.accountMode === 'local'
+      const body = h('div', { className: 'dsh-cj-account-form' },
+        h('div', { className: 'dsh-cj-form-row' },
+          h('div', { className: 'dsh-cj-field' },
+            h('label', { className: 'dsh-cj-label' }, t('name')),
+            h(FieldInput, {
+              value: form.name,
+              placeholder: t('namePh'),
+              onChange: (e) => setForm({ ...form, name: e.target.value }),
+              'data-modal-autofocus': true
+            })
+          ),
+          h('div', { className: 'dsh-cj-field' },
+            h('label', { className: 'dsh-cj-label' }, t('accountMode')),
+            h(SelectField, {
+              value: form.accountMode || 'remote',
+              style: { width: '100%' },
+              'aria-label': t('accountMode'),
+              title: isLocal ? t('modeHintLocal') : t('modeHintRemote'),
+              options: [
+                { value: 'remote', label: t('modeRemote') },
+                { value: 'local', label: t('modeLocal') }
+              ],
+              onChange: (v) => setForm({ ...form, accountMode: v })
+            })
           )
         ),
         isLocal
-          ? h('div', { className: 'dsh-cj-field' },
-              h('label', { className: 'dsh-cj-label' }, t('localRoots')),
-              h('textarea', {
-                className: 'dsh-cj-textarea',
-                rows: 4,
-                value: form.localRootsText || '',
-                placeholder: t('localRootsPh'),
-                onChange: (e) => setForm({ ...form, localRootsText: e.target.value })
-              }),
-              h('div', { className: 'dsh-cj-muted' }, t('localRootsHint'))
-            )
-          : h(React.Fragment, null,
-              h('div', { className: 'dsh-cj-field' },
-                h('label', { className: 'dsh-cj-label' }, t('edition')),
-                h(SelectField, {
-                  value: form.edition,
-                  style: { width: '100%' },
-                  'aria-label': t('edition'),
-                  options: [
-                    { value: 'central', label: t('editionCentral') },
-                    { value: 'region', label: t('editionRegion') }
-                  ],
-                  onChange: (v) => setForm({ ...form, edition: v })
-                }),
-                h('div', { className: 'dsh-cj-muted' },
-                  form.edition === 'region' ? t('editionHintRegion') : t('editionHintCentral')
-                )
-              ),
-              form.edition === 'central'
-                ? h('div', { className: 'dsh-cj-field' },
-                    h('label', { className: 'dsh-cj-label' }, t('orgId')),
-                    h(FieldInput, {
-                      value: form.organizationId,
-                      placeholder: t('orgIdPh'),
-                      onChange: (e) => setForm({ ...form, organizationId: e.target.value })
-                    })
-                  )
-                : h('div', { className: 'dsh-cj-field' },
-                    h('label', { className: 'dsh-cj-label' }, t('apiBase')),
-                    h(FieldInput, {
-                      value: form.apiBaseUrl,
-                      placeholder: t('apiBasePh'),
-                      onChange: (e) => setForm({ ...form, apiBaseUrl: e.target.value })
-                    })
-                  ),
-              h('div', { className: 'dsh-cj-field' },
-                h('label', { className: 'dsh-cj-label' }, t('token')),
-                h(FieldInput, {
-                  type: 'password', value: form.token,
-                  placeholder: mode === 'edit' ? t('tokenPhEdit') : t('tokenPh'),
-                  onChange: (e) => setForm({ ...form, token: e.target.value })
+          ? h('div', { className: 'dsh-cj-form-row' },
+              h('div', { className: 'dsh-cj-field dsh-cj-form-span' },
+                h('label', { className: 'dsh-cj-label' }, t('localRoots')),
+                h('textarea', {
+                  className: 'dsh-cj-textarea',
+                  rows: 3,
+                  value: form.localRootsText || '',
+                  placeholder: t('localRootsPh'),
+                  title: t('localRootsHint'),
+                  onChange: (e) => setForm({ ...form, localRootsText: e.target.value })
                 })
               )
-            ),
-        h('div', { className: 'dsh-cj-field' },
-          h('label', { className: 'dsh-cj-label' }, t('authors')),
-          h(FieldInput, {
-            value: form.authorFilters,
-            placeholder: t('authorsPh'),
-            onChange: (e) => setForm({ ...form, authorFilters: e.target.value })
-          }),
-          h('div', { className: 'dsh-cj-muted' }, t('authorsHint'))
-        ),
-        h('div', { className: 'dsh-cj-field' },
-          h('label', { className: 'dsh-cj-label' }, t('defaultBranch')),
-          h(FieldInput, {
-            value: form.defaultBranch,
-            placeholder: t('defaultBranchPh'),
-            onChange: (e) => setForm({ ...form, defaultBranch: e.target.value })
-          })
+            )
+          : remoteProviderFields(form, setForm, t, mode),
+        h('div', { className: 'dsh-cj-form-row' },
+          h('div', { className: 'dsh-cj-field' },
+            h('label', { className: 'dsh-cj-label' }, t('authors')),
+            h(FieldInput, {
+              value: form.authorFilters,
+              placeholder: t('authorsPh'),
+              title: t('authorsHint'),
+              onChange: (e) => setForm({ ...form, authorFilters: e.target.value })
+            })
+          ),
+          h('div', { className: 'dsh-cj-field' },
+            h('label', { className: 'dsh-cj-label' }, t('defaultBranch')),
+            h(FieldInput, {
+              value: form.defaultBranch,
+              placeholder: t('defaultBranchPh'),
+              onChange: (e) => setForm({ ...form, defaultBranch: e.target.value })
+            })
+          )
         )
       )
 
@@ -1527,13 +1709,14 @@ window.__ModuleLoader__.load({
           title,
           closeLabel: t('cancel'),
           footer,
-          backdropBlur: true
+          backdropBlur: true,
+          className: 'dsh-cj-modal-wide'
         }, body)
       }
 
       if (!open) return null
       return h('div', { className: 'dsh-cj-modal-mask', onClick: onClose },
-        h('div', { className: 'dsh-cj-modal', onClick: (e) => e.stopPropagation() },
+        h('div', { className: 'dsh-cj-modal dsh-cj-modal-wide', onClick: (e) => e.stopPropagation() },
           h('h3', null, title),
           body,
           h('div', { className: 'dsh-cj-actions' }, footer)
@@ -1563,10 +1746,12 @@ window.__ModuleLoader__.load({
     function emptyForm() {
       return {
         name: '',
-        accountMode: 'remote',
+        accountMode: 'local',
+        provider: 'codeup',
         edition: 'central',
         organizationId: '',
         apiBaseUrl: '',
+        insecureSsl: false,
         localRootsText: '',
         token: '',
         authorFilters: '',
@@ -1584,9 +1769,11 @@ window.__ModuleLoader__.load({
           id: a.id,
           name: a.name || '',
           accountMode: a.mode === 'local' ? 'local' : 'remote',
+          provider: a.mode === 'local' ? 'local' : (a.provider || 'codeup'),
           edition: a.edition || 'central',
           organizationId: a.organizationId || '',
           apiBaseUrl: a.apiBaseUrl || '',
+          insecureSsl: !!a.insecureSsl,
           localRootsText: (a.localRoots || []).join('\n'),
           token: '',
           authorFilters: (a.authorFilters || []).join(', '),
@@ -1610,13 +1797,15 @@ window.__ModuleLoader__.load({
         setBusy(true)
         try {
           const isLocal = form.accountMode === 'local'
+          const provider = isLocal ? 'local' : (form.provider || 'codeup')
           const payload = {
             name: form.name,
             mode: isLocal ? 'local' : 'remote',
-            provider: isLocal ? 'local' : 'codeup',
-            edition: isLocal ? undefined : form.edition,
+            provider,
+            edition: !isLocal && provider === 'codeup' ? form.edition : undefined,
             organizationId: isLocal ? undefined : form.organizationId,
             apiBaseUrl: isLocal ? undefined : form.apiBaseUrl,
+            insecureSsl: isLocal ? undefined : !!form.insecureSsl,
             localRoots: isLocal
               ? String(form.localRootsText || '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
               : undefined,
@@ -1668,6 +1857,7 @@ window.__ModuleLoader__.load({
             h('thead', null, h('tr', null,
               h('th', null, t('name')),
               h('th', null, t('accountMode')),
+              h('th', null, t('provider')),
               h('th', null, t('org')),
               h('th', null, t('authors')),
               h('th', null, '')
@@ -1679,20 +1869,36 @@ window.__ModuleLoader__.load({
                   a.active ? h(StatusTag, { tone: 'solid' }, t('active')) : null
                 ),
                 h('td', null, accountModeLabel(t, a.mode)),
-                h('td', { title: a.mode === 'local' ? (a.localRoots || []).join('\n') : undefined },
-                  accountOrgCell(a)
+                h('td', { className: 'dsh-cj-td-clip', title: a.mode === 'local' ? undefined : providerLabel(t, a.provider) },
+                  a.mode === 'local' ? '-' : providerLabel(t, a.provider)
                 ),
-                h('td', null, (a.authorFilters || []).join(', ') || '-'),
-                h('td', null,
+                h('td', {
+                  className: 'dsh-cj-td-clip',
+                  title: a.mode === 'local' ? (a.localRoots || []).join('\n') : (a.organizationId || a.apiBaseUrl || '')
+                }, accountOrgCell(a)),
+                h('td', {
+                  className: 'dsh-cj-td-clip',
+                  title: (a.authorFilters || []).join(', ') || undefined
+                }, (a.authorFilters || []).join(', ') || '-'),
+                h('td', { className: 'dsh-cj-td-actions' },
                   h('div', { className: 'dsh-cj-actions' },
                     !a.active && h(Btn, {
+                      className: 'dsh-cj-btn-icon',
                       disabled: busy,
+                      title: t('activate'),
+                      'aria-label': t('activate'),
                       icon: IconCheck ? h(IconCheck) : null,
                       onClick: () => { void switchAccount(a.id) }
-                    }, t('activate')),
+                    }, IconCheck ? null : t('activate')),
                     h(Btn, {
+                      className: 'dsh-cj-btn-icon',
                       disabled: busy,
-                      icon: IconGlobe ? h(IconGlobe) : null,
+                      title: a.mode === 'local' ? t('testScan') : t('test'),
+                      'aria-label': a.mode === 'local' ? t('testScan') : t('test'),
+                      // 远程测连用地球；本地扫描用搜索，避免纯图标时语义混淆
+                      icon: a.mode === 'local'
+                        ? (IconSearch ? h(IconSearch) : null)
+                        : (IconGlobe ? h(IconGlobe) : null),
                       onClick: async () => {
                         setBusy(true)
                         try {
@@ -1708,10 +1914,21 @@ window.__ModuleLoader__.load({
                         } catch (e) { notify(e.message || String(e), 'error') }
                         finally { setBusy(false) }
                       }
-                    }, a.mode === 'local' ? t('testScan') : t('test')),
-                    h(Btn, { icon: IconEdit ? h(IconEdit) : null, onClick: () => openEdit(a) }, t('edit')),
+                    }, (a.mode === 'local' ? IconSearch : IconGlobe)
+                      ? null
+                      : (a.mode === 'local' ? t('testScan') : t('test'))),
                     h(Btn, {
+                      className: 'dsh-cj-btn-icon',
+                      title: t('edit'),
+                      'aria-label': t('edit'),
+                      icon: IconEdit ? h(IconEdit) : null,
+                      onClick: () => openEdit(a)
+                    }, IconEdit ? null : t('edit')),
+                    h(Btn, {
+                      className: 'dsh-cj-btn-icon',
                       danger: true, disabled: busy,
+                      title: t('remove'),
+                      'aria-label': t('remove'),
                       icon: IconTrash ? h(IconTrash) : null,
                       onClick: async () => {
                         if (!confirm(t('confirmDelete'))) return
@@ -1723,7 +1940,7 @@ window.__ModuleLoader__.load({
                         } catch (e) { notify(e.message || String(e), 'error') }
                         finally { setBusy(false) }
                       }
-                    }, t('remove'))
+                    }, IconTrash ? null : t('remove'))
                   )
                 )
               )
@@ -1752,7 +1969,10 @@ window.__ModuleLoader__.load({
         setLoading(true)
         try {
           const data = await api(
-            '/api/repos/' + encodeURIComponent(repo.id) + '/branches?accountId=' + encodeURIComponent(accountId)
+            '/api/repo-branches?accountId=' +
+              encodeURIComponent(accountId) +
+              '&repoId=' +
+              encodeURIComponent(repo.id)
           )
           const names = (data.branches || []).map((b) => b.name).filter(Boolean)
           if (fallback && !names.includes(fallback)) names.unshift(fallback)

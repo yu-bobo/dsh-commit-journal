@@ -55,7 +55,7 @@ export function registerTools(ctx: Context): void {
     defineTool({
       name: 'upsert_account',
       description:
-        '创建或更新账号。mode=remote（默认）走 Codeup PAT；mode=local 扫描 localRoots 下的本机 git 仓（无需 token）。创建时不要传 id；更新时传 id。',
+        '创建或更新账号。mode=remote（默认）按 provider 用 PAT 拉提交（codeup / gitlab / github）；mode=local 扫描 localRoots 下的本机 git 仓（无需 token）。创建时不要传 id；更新时传 id。',
       parameters: {
         id: { type: 'string', description: '已有账号 id；省略则新建' },
         name: { type: 'string', required: true, description: '账号显示名' },
@@ -65,11 +65,24 @@ export function registerTools(ctx: Context): void {
         },
         provider: {
           type: 'string',
-          description: 'remote 时 codeup | gitlab | github（当前仅 codeup）；local 固定 local'
+          description: 'remote 时 codeup | gitlab | github；local 固定 local'
         },
-        edition: { type: 'string', description: 'central | region（Codeup remote）' },
-        organizationId: { type: 'string', description: '中心版 organizationId' },
-        apiBaseUrl: { type: 'string', description: 'Region 版 API Base URL' },
+        edition: { type: 'string', description: 'central | region（仅 Codeup）' },
+        organizationId: {
+          type: 'string',
+          description:
+            'Codeup 中心版 organizationId；GitHub 可选 org login；GitLab 可选 group path/id'
+        },
+        apiBaseUrl: {
+          type: 'string',
+          description:
+            'Codeup Region API Base；自建 GitLab / GHE 主机（可省略 /api/v4 或 /api/v3）；gitlab.com / github.com 可留空'
+        },
+        insecureSsl: {
+          type: 'boolean',
+          description:
+            '跳过 TLS 证书校验（公司代理 / 自签证书）。也可用环境变量 DSH_COMMIT_JOURNAL_TLS_INSECURE=1'
+        },
         localRoots: {
           type: 'array',
           items: { type: 'string' },
@@ -108,6 +121,7 @@ export function registerTools(ctx: Context): void {
             edition: args.edition,
             organizationId: args.organizationId,
             apiBaseUrl: args.apiBaseUrl,
+            insecureSsl: args.insecureSsl,
             localRoots,
             token,
             authorFilters: args.authorFilters,
@@ -125,6 +139,7 @@ export function registerTools(ctx: Context): void {
             edition: args.edition || 'central',
             organizationId: args.organizationId,
             apiBaseUrl: args.apiBaseUrl,
+            insecureSsl: args.insecureSsl,
             localRoots,
             token,
             authorFilters: args.authorFilters || [],
@@ -181,7 +196,7 @@ export function registerTools(ctx: Context): void {
     defineTool({
       name: 'sync_commits',
       description:
-        '增量同步指定账号的提交到本地缓存。remote=Codeup API；local=扫描根目录下 git log。可先 upsert_account。',
+        '增量同步指定账号的提交到本地缓存。remote=Codeup/GitLab/GitHub API；local=扫描根目录下 git log。可先 upsert_account。',
       parameters: {
         accountId: { type: 'string' },
         repoIds: { type: 'array', items: { type: 'string' }, description: '可选，限制仓库' }

@@ -67,6 +67,7 @@ function migrateAccount(raw: any): Account {
     edition: mode === 'remote' ? raw.edition : undefined,
     organizationId: mode === 'remote' ? raw.organizationId : undefined,
     apiBaseUrl: mode === 'remote' ? raw.apiBaseUrl : undefined,
+    insecureSsl: mode === 'remote' ? Boolean(raw.insecureSsl) : undefined,
     localRoots: mode === 'local' ? normalizeRoots(raw.localRoots) : undefined,
     authorFilters: Array.isArray(raw.authorFilters) ? raw.authorFilters : [],
     defaultBranch: raw.defaultBranch || 'master',
@@ -127,6 +128,7 @@ function buildAccountFields(
       localRoots: normalizeRoots(
         input.localRoots !== undefined ? input.localRoots : prev?.localRoots
       ),
+      insecureSsl: undefined,
       authorFilters: (
         input.authorFilters !== undefined ? input.authorFilters : prev?.authorFilters || []
       )
@@ -148,10 +150,11 @@ function buildAccountFields(
     name: (input.name ?? prev?.name ?? '').trim(),
     mode: 'remote',
     provider,
+    // edition 仅 Codeup 使用；切到 gitlab/github 时清掉残留
     edition:
-      input.edition ??
-      prev?.edition ??
-      (provider === 'codeup' ? 'central' : undefined),
+      provider === 'codeup'
+        ? input.edition ?? prev?.edition ?? 'central'
+        : undefined,
     organizationId:
       input.organizationId !== undefined
         ? input.organizationId.trim() || undefined
@@ -160,6 +163,10 @@ function buildAccountFields(
       input.apiBaseUrl !== undefined
         ? input.apiBaseUrl.trim().replace(/\/$/, '') || undefined
         : prev?.apiBaseUrl,
+    insecureSsl:
+      input.insecureSsl !== undefined
+        ? Boolean(input.insecureSsl)
+        : Boolean(prev?.insecureSsl),
     authorFilters: (
       input.authorFilters !== undefined ? input.authorFilters : prev?.authorFilters || []
     )
@@ -216,6 +223,7 @@ export function updateAccount(input: AccountUpdate): Account {
       edition: input.edition || 'central',
       organizationId: input.organizationId,
       apiBaseUrl: input.apiBaseUrl,
+      insecureSsl: input.insecureSsl,
       localRoots: input.localRoots,
       token: input.token,
       authorFilters: input.authorFilters || [],
@@ -287,7 +295,5 @@ function validateAccount(account: Account, token: string): void {
       throw new Error('Region 版需填写 API Base URL')
     }
   }
-  if (account.provider === 'gitlab' || account.provider === 'github') {
-    throw new Error(`${account.provider} 适配器尚未实现，当前仅支持 codeup`)
-  }
+  // gitlab / github：token 必填；apiBaseUrl / organizationId 可选（见 types 注释）
 }
