@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- Accounts: per-account `mode` — `remote` (Codeup PAT) or `local` (scan `localRoots` for `.git`)
+- Local provider: list/branches/`git log` into the same sync → DB → commits/activity/report pipeline
+- Panel & Agent tools show mode-specific fields and copy (rescan vs API refresh)
+
 ## 0.1.7
 
 - Repos: All / Watched / Unwatched filter

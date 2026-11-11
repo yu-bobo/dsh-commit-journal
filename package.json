@@ -1,7 +1,7 @@
 {
   "name": "dsh-commit-journal",
-  "version": "0.1.7",
-  "description": "DeepSeek Harness plugin: sync commits from Codeup (GitLab/GitHub later), query history, build day/week/month reports, and show an activity heatmap.",
+  "version": "0.2.0",
+  "description": "DeepSeek Harness plugin: sync commits via Codeup remote or local git root scan, query history, build day/week/month reports, and show an activity heatmap.",
   "type": "module",
   "license": "MIT",
   "keywords": [

@@ -15,9 +15,9 @@ window.__ModuleLoader__.load({
     try { ui = require('@deepseek-ai/dsh-client-ui-primitives') } catch { ui = null }
     const UiButton = ui && ui.Button
     const UiModal = ui && ui.Modal
-    const UiInput = ui && ui.Input
     const UiTag = ui && ui.Tag
     const UiMenu = ui && ui.Menu
+    const UiToast = ui && ui.Toast
     const IconPlus = ui && ui.IconPlusOutlineRegular
     const IconRefresh = ui && ui.IconRefreshOutlineRegular
     const IconEdit = ui && ui.IconEditOutlineRegular
@@ -62,23 +62,37 @@ window.__ModuleLoader__.load({
         edit: 'Edit',
         remove: 'Delete',
         test: 'Test',
+        testScan: 'Scan test',
         activate: 'Switch to this',
         currentAccount: 'Current account',
         switchAccount: 'Switch account',
         active: 'Active',
         refresh: 'Refresh',
+        refreshScan: 'Rescan',
         sync: 'Sync',
         syncWatched: 'Sync watched',
+        syncWatchedLocal: 'Sync watched (local)',
         saveWatch: 'Save watched',
         query: 'Query',
         clearCommits: 'Reset local commits',
         clearLogs: 'Clear logs',
+        accountMode: 'Mode',
+        modeRemote: 'Remote pull (Codeup)',
+        modeLocal: 'Local scan (git)',
+        modeRemoteShort: 'Remote',
+        modeLocalShort: 'Local',
+        modeHintRemote: 'Uses Yunxiao PAT to pull commits from Codeup.',
+        modeHintLocal: 'Scans git repos under the folders you list — no token needed.',
+        localRoots: 'Scan roots',
+        localRootsPh: 'One absolute path per line\ne.g. F:\\Personal\\projects',
+        localRootsHint: 'Recursively find .git under each root (depth ≤ 5).',
         name: 'Display name',
         namePh: 'e.g. Work account',
         edition: 'Org type',
         editionCentral: 'Central (public cloud)',
         editionRegion: 'Region (dedicated / private)',
-        editionHint: 'Central: codeup.aliyun.com — fill organization ID. Region: your own instance domain.',
+        editionHintCentral: 'Uses codeup.aliyun.com — fill organization ID below.',
+        editionHintRegion: 'Fill your dedicated instance API Base URL below.',
         org: 'Organization / API',
         orgId: 'organizationId',
         orgIdPh: 'Org ID from Yunxiao org admin → Basic info',
@@ -131,10 +145,12 @@ window.__ModuleLoader__.load({
         refreshOk: 'Repos refreshed',
         saveWatchOk: 'Watched repos saved',
         testOk: 'Connection OK',
+        testScanOk: 'Scan OK ({n} repos)',
         activateOk: 'Account activated',
         saveOk: 'Saved',
         clearOk: 'Cleared',
         queryOk: 'Updated',
+        refreshScanOk: 'Rescanned roots',
         currentStreak: 'Current streak',
         avgPerDay: 'Avg / active day',
         peakOn: 'Peak on',
@@ -157,13 +173,17 @@ window.__ModuleLoader__.load({
         filterAll: 'All',
         filterWatched: 'Watched',
         filterUnwatched: 'Unwatched',
-        descAccounts: 'Each account is one Codeup identity; the PAT is encrypted on this machine.',
+        descAccounts:
+          'Each account is remote (Codeup PAT) or local (scan roots). Switch the active account to change which data other tabs use.',
         descRepos:
           '“Sync watched” pulls all watched repos; each row can sync alone. With nothing watched, full sync covers every visible repo.',
+        descReposLocal:
+          'Rescan discovers git repos under your roots. Watch the ones to index; sync runs git log into the local cache.',
         descCommits: 'Browse locally synced commits; filter by repo, date range, and keyword.',
         descActivity: 'Contribution heatmap for the selected range.',
         descLogs: 'Sync log for the current account; error rows show which repo failed.',
-        descSettings: 'Scheduled sync applies to every account. Lookback days apply on first sync, after reset, and once after you raise the window; otherwise sync is incremental.',
+        descSettings:
+          'Scheduled sync applies to every account (remote API or local rescan). Lookback days apply on first sync, after reset, and once after you raise the window; otherwise sync is incremental.',
         syncSettingsTitle: 'Sync'
       },
       zh: {
@@ -181,23 +201,37 @@ window.__ModuleLoader__.load({
         edit: '编辑',
         remove: '删除',
         test: '测试',
+        testScan: '扫描测试',
         activate: '切换为当前',
         currentAccount: '当前账号',
         switchAccount: '切换账号',
         active: '当前',
         refresh: '刷新',
+        refreshScan: '重新扫描',
         sync: '同步',
         syncWatched: '同步关注',
+        syncWatchedLocal: '同步关注（本地）',
         saveWatch: '保存关注',
         query: '查询',
         clearCommits: '重置本地提交',
         clearLogs: '清除日志',
+        accountMode: '模式',
+        modeRemote: '远程拉取（Codeup）',
+        modeLocal: '本地扫描（git）',
+        modeRemoteShort: '远程',
+        modeLocalShort: '本地',
+        modeHintRemote: '使用云效个人访问令牌，从 Codeup 拉取提交。',
+        modeHintLocal: '扫描下方根目录中的本机 git 仓库，无需令牌。',
+        localRoots: '扫描根目录',
+        localRootsPh: '每行一个绝对路径\n例如 F:\\Personal\\projects',
+        localRootsHint: '在各根目录下递归查找 .git（深度 ≤ 5）。',
         name: '显示名称',
         namePh: '例如：公司主账号',
         edition: '组织类型',
         editionCentral: '中心版（公共云）',
         editionRegion: 'Region 版（专有云 / 独立实例）',
-        editionHint: '中心版走 codeup.aliyun.com，填组织 ID；Region 版填你的实例访问域名。',
+        editionHintCentral: '走 codeup.aliyun.com，请在下方填写组织 ID。',
+        editionHintRegion: '请在下方填写专有云 / 独立实例的 API Base URL。',
         org: '组织 / 接入点',
         orgId: 'organizationId',
         orgIdPh: '组织管理后台 → 基本信息里的组织 ID',
@@ -250,10 +284,12 @@ window.__ModuleLoader__.load({
         refreshOk: '仓库列表已刷新',
         saveWatchOk: '关注列表已保存',
         testOk: '连接测试通过',
+        testScanOk: '扫描通过（发现 {n} 个仓库）',
         activateOk: '已切换为当前账号',
         saveOk: '已保存',
         clearOk: '已清除',
         queryOk: '已更新',
+        refreshScanOk: '已按根目录重新扫描',
         currentStreak: '当前连续',
         avgPerDay: '活跃日均',
         peakOn: '峰值日期',
@@ -276,19 +312,27 @@ window.__ModuleLoader__.load({
         filterAll: '全部',
         filterWatched: '已关注',
         filterUnwatched: '未关注',
-        descAccounts: '每个账号对应一套云效身份；令牌加密保存在本地。',
+        descAccounts:
+          '每个账号可选远程（云效 PAT）或本地（扫描根目录）。切换当前账号后，其它页签使用该账号数据。',
         descRepos:
           '「同步关注」拉取全部关注仓；单行可单独同步。未关注任何仓库时全量同步会覆盖全部可见仓。',
+        descReposLocal:
+          '「重新扫描」按根目录发现本机 git 仓；勾选关注后同步会执行 git log 写入本地缓存。',
         descCommits: '查询本地已同步的提交记录；可按仓库、日期与关键词筛选。',
         descActivity: '近一年 / 指定年份的提交活跃度。',
         descLogs: '当前账号同步记录；错误行可查看具体仓库失败原因。',
         descSettings:
-          '定时同步对所有账号生效。回溯天数用于首次同步、重置记录后，以及调大该值后的下一次同步（会按新窗口回填一次历史）；其余时间按上次同步时间增量拉取。',
+          '定时同步对所有账号生效（远程拉 API 或本地重扫）。回溯天数用于首次同步、重置记录后，以及调大该值后的下一次同步（会按新窗口回填一次历史）；其余时间按上次同步时间增量拉取。',
         syncSettingsTitle: '同步'
       }
     }
 
     const CSS = `
+      /* 与侧栏「新会话」同档（实测 #e5e5e5）；挂 :root 以便 Modal/Toast portal 也能用 */
+      :root, .dsh-cj-root {
+        --dsh-cj-border: #e5e5e5;
+        --dsh-cj-border: color-mix(in srgb, var(--dsw-alias-label-primary, #000) 10%, transparent);
+      }
       .dsh-cj-root {
         --dsh-cj-heat-0: #ebedf0;
         --dsh-cj-heat-1: #9be9a8;
@@ -329,7 +373,7 @@ window.__ModuleLoader__.load({
         display: flex;
         gap: 4px;
         padding: calc(var(--dsh-frame-top-clearance, 0px) + 12px) 20px 0;
-        border-bottom: 1px solid var(--dsw-alias-border-l1);
+        border-bottom: 1px solid var(--dsh-cj-border);
         flex-shrink: 0;
       }
       .dsh-cj-tab {
@@ -408,7 +452,7 @@ window.__ModuleLoader__.load({
         min-height: 32px;
         padding: 0 12px;
         margin: 0;
-        border: 1px solid var(--dsw-alias-border-l1);
+        border: 1px solid var(--dsh-cj-border, #e5e5e5);
         background: var(--dsw-alias-bg-layer-1);
         color: var(--dsw-alias-label-primary);
         border-radius: var(--dsw-radius-sm, 8px);
@@ -435,19 +479,39 @@ window.__ModuleLoader__.load({
       .dsh-cj-btn-danger {
         color: var(--dsw-alias-state-error-primary) !important;
       }
-      .dsh-cj-input, .dsh-cj-select {
+      /* 控件描边与 --dsh-cj-border 同档；打到控件本身，不走官方 Input 偏浅的 l4 */
+      .dsh-cj-control,
+      .dsh-cj-input,
+      .dsh-cj-select,
+      .dsh-cj-select-trigger,
+      .dsh-cj-textarea {
         box-sizing: border-box;
+        border: 1px solid var(--dsh-cj-border, #e5e5e5) !important;
+        border-radius: var(--dsw-radius-sm, 8px) !important;
+        background: var(--dsw-alias-bg-layer-1, #fff);
+        color: var(--dsw-alias-label-primary, #111);
+      }
+      .dsh-cj-control:focus-within,
+      .dsh-cj-input:focus,
+      .dsh-cj-select:focus,
+      .dsh-cj-select-trigger:focus,
+      .dsh-cj-select-trigger[aria-expanded="true"],
+      .dsh-cj-textarea:focus {
+        border-color: var(--dsw-alias-state-business-primary, var(--dsw-alias-brand-primary, #1677ff)) !important;
+        outline: none !important;
+      }
+      .dsh-cj-input, .dsh-cj-select {
         height: 32px;
         min-height: 32px;
-        border: 1px solid var(--dsw-alias-border-l1);
-        background: var(--dsw-alias-bg-layer-1);
-        color: var(--dsw-alias-label-primary);
-        border-radius: var(--dsw-radius-sm, 8px);
         padding: 0 10px;
         font-size: 12px;
         line-height: 18px;
         min-width: 0;
         vertical-align: middle;
+      }
+      .dsh-cj-input[type="date"] {
+        min-width: 140px;
+        color-scheme: inherit;
       }
       .dsh-cj-select-trigger {
         display: inline-flex !important;
@@ -457,6 +521,23 @@ window.__ModuleLoader__.load({
         width: auto;
         max-width: 100%;
         min-width: 0;
+        height: 32px !important;
+        min-height: 32px !important;
+        max-height: 32px !important;
+        padding: 0 10px !important;
+        font-size: 12px !important;
+        line-height: 18px !important;
+        font-weight: 400 !important;
+      }
+      .dsh-cj-select-anchor {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+      }
+      .dsh-cj-select-anchor .dsh-cj-select-trigger,
+      .dsh-cj-field .dsh-cj-select-trigger {
+        width: 100% !important;
       }
       .dsh-cj-select-trigger .dsh-cj-select-label {
         overflow: hidden;
@@ -479,7 +560,7 @@ window.__ModuleLoader__.load({
         overflow: auto;
         padding: 4px;
         border-radius: var(--dsw-radius-sm, 8px);
-        border: 1px solid var(--dsw-alias-border-l1);
+        border: 1px solid var(--dsh-cj-border);
         background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1));
         box-shadow: var(--dsw-elevation-prominent, 0 8px 24px rgba(0,0,0,.18));
       }
@@ -492,9 +573,9 @@ window.__ModuleLoader__.load({
         color: var(--dsw-alias-label-primary);
         text-align: left;
         border-radius: 6px;
-        padding: 7px 10px;
-        font-size: 12px;
-        line-height: 18px;
+        padding: 8px 10px;
+        font-size: 14px;
+        line-height: 22px;
         cursor: pointer;
       }
       .dsh-cj-select-option:hover,
@@ -510,24 +591,45 @@ window.__ModuleLoader__.load({
         cursor: not-allowed;
       }
       .dsh-cj-textarea {
-        border: 1px solid var(--dsw-alias-border-l1);
-        background: var(--dsw-alias-bg-layer-1);
-        color: var(--dsw-alias-label-primary);
-        border-radius: var(--dsw-radius-sm, 8px);
-        padding: 8px 10px;
-        font-size: 12px;
+        display: block;
         width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        padding: 8px 10px;
+        margin: 0;
+        font-size: 12px;
+        line-height: 18px;
+        font-family: inherit;
         min-height: 72px;
         resize: vertical;
+        outline: none;
+      }
+      .dsh-cj-textarea::placeholder,
+      .dsh-cj-input::placeholder {
+        color: var(--dsw-alias-label-dimmed);
       }
       /* Official Input wrapper also lands at 32px */
-      .dsh-cj-row > span,
-      .dsh-cj-field > span {
+      .dsh-cj-row > span {
         vertical-align: middle;
       }
       .dsh-cj-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+      /* 官方 Input 外层是 inline-flex + align-items:center；拉满宽度时不能改成 block，否则 placeholder 不垂直居中 */
+      .dsh-cj-field > span {
+        display: inline-flex;
+        align-items: center;
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+      }
+      .dsh-cj-field .dsh-cj-input {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+      }
       .dsh-cj-label { color: var(--dsw-alias-label-secondary); font-size: 12px; }
-      .dsh-cj-muted { color: var(--dsw-alias-label-secondary); font-size: 12px; }
+      .dsh-cj-muted { color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 1.45; }
       .dsh-cj-page-head { margin-bottom: 14px; }
       .dsh-cj-page-title {
         margin: 0 0 6px;
@@ -551,7 +653,7 @@ window.__ModuleLoader__.load({
       .dsh-cj-table-wrap {
         flex: 1;
         min-height: 0;
-        border: 1px solid var(--dsw-alias-border-l1);
+        border: 1px solid var(--dsh-cj-border);
         border-radius: 12px;
         overflow: auto;
         background: var(--dsw-alias-bg-layer-1);
@@ -565,7 +667,7 @@ window.__ModuleLoader__.load({
       .dsh-cj-table th, .dsh-cj-table td {
         padding: 10px 12px;
         text-align: left;
-        border-bottom: 1px solid var(--dsw-alias-border-l1);
+        border-bottom: 1px solid var(--dsh-cj-border);
         vertical-align: top;
       }
       .dsh-cj-table th {
@@ -588,7 +690,7 @@ window.__ModuleLoader__.load({
         white-space: nowrap;
       }
       .dsh-cj-tag[data-tone="outline"] {
-        border: 0.5px solid var(--dsw-alias-border-l4, var(--dsw-alias-border-l1));
+        border: 0.5px solid var(--dsw-alias-border-l4, var(--dsh-cj-border));
         color: var(--dsw-alias-label-tertiary, var(--dsw-alias-label-secondary));
       }
       .dsh-cj-tag[data-tone="solid"] {
@@ -626,7 +728,7 @@ window.__ModuleLoader__.load({
       .dsh-cj-modal {
         width: min(480px, 100%);
         background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1));
-        border: 1px solid var(--dsw-alias-border-l1);
+        border: 1px solid var(--dsh-cj-border);
         border-radius: var(--dsw-radius-panel, 14px);
         padding: 16px;
         max-height: 100%;
@@ -644,7 +746,7 @@ window.__ModuleLoader__.load({
         position: relative;
         overflow: hidden;
         background: var(--dsw-alias-bg-layer-1);
-        border: 1px solid var(--dsw-alias-border-l1);
+        border: 1px solid var(--dsh-cj-border);
         border-radius: 12px;
         padding: 12px 14px 13px;
       }
@@ -681,7 +783,7 @@ window.__ModuleLoader__.load({
       }
       .dsh-cj-heat {
         background: var(--dsw-alias-bg-layer-1);
-        border: 1px solid var(--dsw-alias-border-l1);
+        border: 1px solid var(--dsh-cj-border);
         border-radius: 12px;
         padding: 14px 16px 12px;
         overflow-x: hidden;
@@ -749,7 +851,7 @@ window.__ModuleLoader__.load({
       .dsh-cj-cell.lv4 { background: var(--dsh-cj-heat-4); }
       .dsh-cj-cell.is-blank {
         opacity: .45;
-        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-border-l1) 80%, transparent);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsh-cj-border) 80%, transparent);
       }
       .dsh-cj-cell.has-commits { cursor: pointer; }
       .dsh-cj-cell.has-commits:hover {
@@ -787,7 +889,7 @@ window.__ModuleLoader__.load({
       }
       .dsh-cj-insight {
         background: var(--dsw-alias-bg-layer-1);
-        border: 1px solid var(--dsw-alias-border-l1);
+        border: 1px solid var(--dsh-cj-border);
         border-radius: 12px;
         padding: 12px 14px;
       }
@@ -810,7 +912,7 @@ window.__ModuleLoader__.load({
       .dsh-cj-wd-bar {
         height: 6px;
         border-radius: 999px;
-        background: color-mix(in srgb, var(--dsw-alias-border-l1) 70%, transparent);
+        background: color-mix(in srgb, var(--dsh-cj-border) 70%, transparent);
         overflow: hidden;
       }
       .dsh-cj-wd-bar > i {
@@ -840,7 +942,7 @@ window.__ModuleLoader__.load({
         display: flex;
         flex-direction: column;
         background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1));
-        border-left: 1px solid var(--dsw-alias-border-l1);
+        border-left: 1px solid var(--dsh-cj-border);
         box-shadow: var(--dsw-elevation-prominent, none);
         padding: 14px 16px 16px;
       }
@@ -873,7 +975,7 @@ window.__ModuleLoader__.load({
         padding: 11px 13px 12px;
         margin-bottom: 10px;
         border-radius: 12px;
-        border: 1px solid var(--dsw-alias-border-l1);
+        border: 1px solid var(--dsh-cj-border);
         background: var(--dsw-alias-bg-layer-1);
       }
       .dsh-cj-commit:last-child { margin-bottom: 0; }
@@ -907,7 +1009,7 @@ window.__ModuleLoader__.load({
       .dsh-cj-commit-sha {
         padding: 1px 6px;
         border-radius: 5px;
-        border: 1px solid var(--dsw-alias-border-l1);
+        border: 1px solid var(--dsh-cj-border);
         background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1));
         font-size: 11px;
       }
@@ -919,7 +1021,7 @@ window.__ModuleLoader__.load({
         align-items: center;
         margin-top: 4px;
         padding: 12px 0 2px;
-        border-top: 1px solid var(--dsw-alias-border-l1);
+        border-top: 1px solid var(--dsh-cj-border);
       }
       .dsh-cj-pager-info {
         margin-right: auto;
@@ -940,30 +1042,30 @@ window.__ModuleLoader__.load({
         color: var(--dsw-alias-brand-primary);
         text-decoration: none;
       }
-      .dsh-cj-notice {
-        flex-shrink: 0;
-        z-index: 5;
-        margin: 0 0 12px;
-        padding: 10px 12px;
+      .dsh-cj-toast-fallback {
+        position: fixed;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10000;
+        max-width: min(520px, calc(100vw - 24px));
+        padding: 10px 14px;
         border-radius: 10px;
         font-size: 12px;
-        line-height: 1.4;
-        background: var(--dsw-alias-bg-layer-1);
-        border: 1px solid var(--dsw-alias-border-l1);
+        line-height: 1.45;
+        background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1));
+        border: 1px solid var(--dsh-cj-border);
         color: var(--dsw-alias-label-primary);
-        box-shadow: var(--dsw-elevation-subtle, none);
+        box-shadow: var(--dsw-elevation-prominent, 0 8px 24px rgba(0,0,0,.18));
+        pointer-events: none;
       }
-      .dsh-cj-notice[data-tone="success"] {
+      .dsh-cj-toast-fallback[data-tone="success"] {
         background: color-mix(in srgb, var(--dsh-cj-heat-2) 18%, var(--dsw-alias-bg-layer-1));
-        border-color: color-mix(in srgb, var(--dsh-cj-heat-3) 35%, var(--dsw-alias-border-l1));
-        color: var(--dsw-alias-label-primary);
+        border-color: color-mix(in srgb, var(--dsh-cj-heat-3) 35%, var(--dsh-cj-border));
       }
-      .dsh-cj-root[data-scheme="dark"] .dsh-cj-notice[data-tone="success"] {
-        background: color-mix(in srgb, var(--dsh-cj-heat-3) 22%, var(--dsw-alias-bg-layer-1));
-      }
-      .dsh-cj-notice[data-tone="error"] {
+      .dsh-cj-toast-fallback[data-tone="error"] {
         background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, var(--dsw-alias-bg-layer-1));
-        border-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 35%, var(--dsw-alias-border-l1));
+        border-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 35%, var(--dsh-cj-border));
         color: var(--dsw-alias-state-error-primary);
       }
       .dsh-cj-seg {
@@ -972,7 +1074,7 @@ window.__ModuleLoader__.load({
         padding: 2px;
         border-radius: 8px;
         background: var(--dsw-alias-bg-layer-2);
-        border: 1px solid var(--dsw-alias-border-l1);
+        border: 1px solid var(--dsh-cj-border);
       }
       .dsh-cj-seg button {
         appearance: none;
@@ -1124,7 +1226,7 @@ window.__ModuleLoader__.load({
       const trigger = h('button', {
         ref: anchorRef,
         type: 'button',
-        className: ['dsh-cj-btn', 'dsh-cj-btn-sized', 'dsh-cj-select-trigger', className].filter(Boolean).join(' '),
+        className: ['dsh-cj-btn', 'dsh-cj-btn-sized', 'dsh-cj-control', 'dsh-cj-select-trigger', className].filter(Boolean).join(' '),
         style,
         disabled: !!disabled,
         title: title || ariaLabel || undefined,
@@ -1155,8 +1257,6 @@ window.__ModuleLoader__.load({
           onClose: close,
           portal: true,
           minWidthFromAnchor: true,
-          dense: true,
-          compact: true,
           selection: 'check',
           selectedId: toId(value),
           items: list.map((o) => ({
@@ -1167,7 +1267,10 @@ window.__ModuleLoader__.load({
           onSelect: (id) => { pick(fromId(id)) },
           anchor: h('span', {
             ref: anchorRef,
-            style: { display: 'inline-flex', maxWidth: '100%' },
+            className: 'dsh-cj-select-anchor',
+            style: style && style.width === '100%'
+              ? { display: 'block', width: '100%', maxWidth: '100%' }
+              : { display: 'inline-flex', maxWidth: '100%' },
             onClick: (e) => {
               if (disabled) return
               e.preventDefault()
@@ -1177,7 +1280,7 @@ window.__ModuleLoader__.load({
           },
             h('button', {
               type: 'button',
-              className: ['dsh-cj-btn', 'dsh-cj-btn-sized', 'dsh-cj-select-trigger', className].filter(Boolean).join(' '),
+              className: ['dsh-cj-btn', 'dsh-cj-btn-sized', 'dsh-cj-control', 'dsh-cj-select-trigger', className].filter(Boolean).join(' '),
               style,
               disabled: !!disabled,
               title: title || ariaLabel || undefined,
@@ -1288,17 +1391,30 @@ window.__ModuleLoader__.load({
 
     function FieldInput(props) {
       const { className, ...rest } = props
-      if (UiInput) {
-        return h(UiInput, { className: className || undefined, ...rest })
-      }
-      return h('input', { className: ['dsh-cj-input', className].filter(Boolean).join(' '), ...rest })
+      // 不用官方 Input：其默认 border-l4 比侧栏「新会话」浅，且内部样式会盖过 className
+      const merged = ['dsh-cj-input', 'dsh-cj-control', className].filter(Boolean).join(' ')
+      return h('input', { className: merged, ...rest })
     }
 
     function editionLabel(t, edition) {
       return edition === 'region' ? t('editionRegion') : t('editionCentral')
     }
 
+    function accountModeLabel(t, mode) {
+      return mode === 'local' ? t('modeLocalShort') : t('modeRemoteShort')
+    }
+
+    function accountOrgCell(a) {
+      if (a.mode === 'local') {
+        const roots = a.localRoots || []
+        if (!roots.length) return '-'
+        return roots.length === 1 ? roots[0] : roots[0] + ' (+' + (roots.length - 1) + ')'
+      }
+      return a.organizationId || a.apiBaseUrl || '-'
+    }
+
     function AccountModal({ open, title, form, setForm, busy, onClose, onSave, t, mode }) {
+      const isLocal = form.accountMode === 'local'
       const body = h(React.Fragment, null,
         h('div', { className: 'dsh-cj-field' },
           h('label', { className: 'dsh-cj-label' }, t('name')),
@@ -1310,44 +1426,76 @@ window.__ModuleLoader__.load({
           })
         ),
         h('div', { className: 'dsh-cj-field' },
-          h('label', { className: 'dsh-cj-label' }, t('edition')),
+          h('label', { className: 'dsh-cj-label' }, t('accountMode')),
           h(SelectField, {
-            value: form.edition,
+            value: form.accountMode || 'remote',
             style: { width: '100%' },
-            'aria-label': t('edition'),
+            'aria-label': t('accountMode'),
             options: [
-              { value: 'central', label: t('editionCentral') },
-              { value: 'region', label: t('editionRegion') }
+              { value: 'remote', label: t('modeRemote') },
+              { value: 'local', label: t('modeLocal') }
             ],
-            onChange: (v) => setForm({ ...form, edition: v })
+            onChange: (v) => setForm({ ...form, accountMode: v })
           }),
-          h('div', { className: 'dsh-cj-muted' }, t('editionHint'))
+          h('div', { className: 'dsh-cj-muted' },
+            isLocal ? t('modeHintLocal') : t('modeHintRemote')
+          )
         ),
-        form.edition === 'central'
+        isLocal
           ? h('div', { className: 'dsh-cj-field' },
-              h('label', { className: 'dsh-cj-label' }, t('orgId')),
-              h(FieldInput, {
-                value: form.organizationId,
-                placeholder: t('orgIdPh'),
-                onChange: (e) => setForm({ ...form, organizationId: e.target.value })
-              })
+              h('label', { className: 'dsh-cj-label' }, t('localRoots')),
+              h('textarea', {
+                className: 'dsh-cj-textarea',
+                rows: 4,
+                value: form.localRootsText || '',
+                placeholder: t('localRootsPh'),
+                onChange: (e) => setForm({ ...form, localRootsText: e.target.value })
+              }),
+              h('div', { className: 'dsh-cj-muted' }, t('localRootsHint'))
             )
-          : h('div', { className: 'dsh-cj-field' },
-              h('label', { className: 'dsh-cj-label' }, t('apiBase')),
-              h(FieldInput, {
-                value: form.apiBaseUrl,
-                placeholder: t('apiBasePh'),
-                onChange: (e) => setForm({ ...form, apiBaseUrl: e.target.value })
-              })
+          : h(React.Fragment, null,
+              h('div', { className: 'dsh-cj-field' },
+                h('label', { className: 'dsh-cj-label' }, t('edition')),
+                h(SelectField, {
+                  value: form.edition,
+                  style: { width: '100%' },
+                  'aria-label': t('edition'),
+                  options: [
+                    { value: 'central', label: t('editionCentral') },
+                    { value: 'region', label: t('editionRegion') }
+                  ],
+                  onChange: (v) => setForm({ ...form, edition: v })
+                }),
+                h('div', { className: 'dsh-cj-muted' },
+                  form.edition === 'region' ? t('editionHintRegion') : t('editionHintCentral')
+                )
+              ),
+              form.edition === 'central'
+                ? h('div', { className: 'dsh-cj-field' },
+                    h('label', { className: 'dsh-cj-label' }, t('orgId')),
+                    h(FieldInput, {
+                      value: form.organizationId,
+                      placeholder: t('orgIdPh'),
+                      onChange: (e) => setForm({ ...form, organizationId: e.target.value })
+                    })
+                  )
+                : h('div', { className: 'dsh-cj-field' },
+                    h('label', { className: 'dsh-cj-label' }, t('apiBase')),
+                    h(FieldInput, {
+                      value: form.apiBaseUrl,
+                      placeholder: t('apiBasePh'),
+                      onChange: (e) => setForm({ ...form, apiBaseUrl: e.target.value })
+                    })
+                  ),
+              h('div', { className: 'dsh-cj-field' },
+                h('label', { className: 'dsh-cj-label' }, t('token')),
+                h(FieldInput, {
+                  type: 'password', value: form.token,
+                  placeholder: mode === 'edit' ? t('tokenPhEdit') : t('tokenPh'),
+                  onChange: (e) => setForm({ ...form, token: e.target.value })
+                })
+              )
             ),
-        h('div', { className: 'dsh-cj-field' },
-          h('label', { className: 'dsh-cj-label' }, t('token')),
-          h(FieldInput, {
-            type: 'password', value: form.token,
-            placeholder: mode === 'edit' ? t('tokenPhEdit') : t('tokenPh'),
-            onChange: (e) => setForm({ ...form, token: e.target.value })
-          })
-        ),
         h('div', { className: 'dsh-cj-field' },
           h('label', { className: 'dsh-cj-label' }, t('authors')),
           h(FieldInput, {
@@ -1415,9 +1563,11 @@ window.__ModuleLoader__.load({
     function emptyForm() {
       return {
         name: '',
+        accountMode: 'remote',
         edition: 'central',
         organizationId: '',
         apiBaseUrl: '',
+        localRootsText: '',
         token: '',
         authorFilters: '',
         defaultBranch: 'master'
@@ -1433,9 +1583,11 @@ window.__ModuleLoader__.load({
         setForm({
           id: a.id,
           name: a.name || '',
+          accountMode: a.mode === 'local' ? 'local' : 'remote',
           edition: a.edition || 'central',
           organizationId: a.organizationId || '',
           apiBaseUrl: a.apiBaseUrl || '',
+          localRootsText: (a.localRoots || []).join('\n'),
           token: '',
           authorFilters: (a.authorFilters || []).join(', '),
           defaultBranch: a.defaultBranch || 'master'
@@ -1457,13 +1609,18 @@ window.__ModuleLoader__.load({
       const save = async () => {
         setBusy(true)
         try {
+          const isLocal = form.accountMode === 'local'
           const payload = {
             name: form.name,
-            provider: 'codeup',
-            edition: form.edition,
-            organizationId: form.organizationId,
-            apiBaseUrl: form.apiBaseUrl,
-            token: form.token || undefined,
+            mode: isLocal ? 'local' : 'remote',
+            provider: isLocal ? 'local' : 'codeup',
+            edition: isLocal ? undefined : form.edition,
+            organizationId: isLocal ? undefined : form.organizationId,
+            apiBaseUrl: isLocal ? undefined : form.apiBaseUrl,
+            localRoots: isLocal
+              ? String(form.localRootsText || '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
+              : undefined,
+            token: isLocal ? undefined : (form.token || undefined),
             authorFilters: form.authorFilters.split(/[,，]/).map((s) => s.trim()).filter(Boolean),
             defaultBranch: form.defaultBranch,
             setActive: true,
@@ -1496,7 +1653,10 @@ window.__ModuleLoader__.load({
                   disabled: busy || accounts.length < 2,
                   'aria-label': t('switchAccount'),
                   placeholder: t('switchAccount'),
-                  options: accounts.map((a) => ({ value: a.id, label: a.name || a.id })),
+                  options: accounts.map((a) => ({
+                    value: a.id,
+                    label: (a.name || a.id) + ' · ' + accountModeLabel(t, a.mode)
+                  })),
                   onChange: (id) => { void switchAccount(id) }
                 })
               )
@@ -1507,7 +1667,7 @@ window.__ModuleLoader__.load({
           h('table', { className: 'dsh-cj-table' },
             h('thead', null, h('tr', null,
               h('th', null, t('name')),
-              h('th', null, t('edition')),
+              h('th', null, t('accountMode')),
               h('th', null, t('org')),
               h('th', null, t('authors')),
               h('th', null, '')
@@ -1518,8 +1678,10 @@ window.__ModuleLoader__.load({
                   a.name, ' ',
                   a.active ? h(StatusTag, { tone: 'solid' }, t('active')) : null
                 ),
-                h('td', null, editionLabel(t, a.edition)),
-                h('td', null, a.organizationId || a.apiBaseUrl || '-'),
+                h('td', null, accountModeLabel(t, a.mode)),
+                h('td', { title: a.mode === 'local' ? (a.localRoots || []).join('\n') : undefined },
+                  accountOrgCell(a)
+                ),
                 h('td', null, (a.authorFilters || []).join(', ') || '-'),
                 h('td', null,
                   h('div', { className: 'dsh-cj-actions' },
@@ -1534,12 +1696,19 @@ window.__ModuleLoader__.load({
                       onClick: async () => {
                         setBusy(true)
                         try {
-                          await api('/api/accounts/' + encodeURIComponent(a.id) + '/test', { method: 'POST', body: '{}' })
-                          notify(t('testOk'), 'success')
+                          const res = await api(
+                            '/api/accounts/' + encodeURIComponent(a.id) + '/test',
+                            { method: 'POST', body: '{}' }
+                          )
+                          if (a.mode === 'local') {
+                            notify(fillMsg(t('testScanOk'), { n: res.repoCount || 0 }), 'success')
+                          } else {
+                            notify(t('testOk'), 'success')
+                          }
                         } catch (e) { notify(e.message || String(e), 'error') }
                         finally { setBusy(false) }
                       }
-                    }, t('test')),
+                    }, a.mode === 'local' ? t('testScan') : t('test')),
                     h(Btn, { icon: IconEdit ? h(IconEdit) : null, onClick: () => openEdit(a) }, t('edit')),
                     h(Btn, {
                       danger: true, disabled: busy,
@@ -1645,7 +1814,7 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function ReposPage({ t, accountId, busy, setBusy, notify }) {
+    function ReposPage({ t, accountId, accountMode, busy, setBusy, notify }) {
       const [repos, setRepos] = useState([])
       const [watched, setWatched] = useState([])
       const [branches, setBranches] = useState({})
@@ -1653,6 +1822,7 @@ window.__ModuleLoader__.load({
       const [watchFilter, setWatchFilter] = useState('watched')
       const [page, setPage] = useState(1)
       const [pageSize, setPageSize] = useState(10)
+      const isLocal = accountMode === 'local'
 
       const load = useCallback(async () => {
         if (!accountId) return
@@ -1692,7 +1862,7 @@ window.__ModuleLoader__.load({
       }
 
       return h('div', { className: 'dsh-cj-page-fill' },
-        h(PageHead, { desc: t('descRepos') }),
+        h(PageHead, { desc: isLocal ? t('descReposLocal') : t('descRepos') }),
         h('div', { className: 'dsh-cj-row' },
           h(WatchFilter, { t, value: watchFilter, onChange: setWatchFilter }),
           h(FieldInput, {
@@ -1711,11 +1881,11 @@ window.__ModuleLoader__.load({
                 try {
                   await api('/api/repos/refresh', { method: 'POST', body: JSON.stringify({ accountId }) })
                   await load()
-                  notify(t('refreshOk'), 'success')
+                  notify(isLocal ? t('refreshScanOk') : t('refreshOk'), 'success')
                 } catch (e) { notify(e.message || String(e), 'error') }
                 finally { setBusy(false) }
               }
-            }, t('refresh')),
+            }, isLocal ? t('refreshScan') : t('refresh')),
             h(Btn, {
               disabled: busy,
               icon: IconSave ? h(IconSave) : null,
@@ -1743,7 +1913,7 @@ window.__ModuleLoader__.load({
                 } catch (e) { notify(e.message || String(e), 'error') }
                 finally { setBusy(false) }
               }
-            }, t('syncWatched'))
+            }, isLocal ? t('syncWatchedLocal') : t('syncWatched'))
           )
         ),
         h('div', { className: 'dsh-cj-table-wrap' },
@@ -1890,12 +2060,28 @@ window.__ModuleLoader__.load({
             ),
             onChange: setRepoId
           }),
-          h('input', { className: 'dsh-cj-input', type: 'date', value: from, onChange: (e) => setFrom(e.target.value), title: t('from') }),
-          h('input', { className: 'dsh-cj-input', type: 'date', value: to, onChange: (e) => setTo(e.target.value), title: t('to') }),
-          h('input', {
-            className: 'dsh-cj-input', style: { minWidth: 160 },
-            placeholder: t('keyword'), value: keyword,
-            onChange: (e) => setKeyword(e.target.value)
+          h(FieldInput, {
+            type: 'date',
+            style: { minWidth: 140 },
+            value: from,
+            onChange: (e) => setFrom(e.target.value),
+            title: t('from'),
+            'aria-label': t('from')
+          }),
+          h(FieldInput, {
+            type: 'date',
+            style: { minWidth: 140 },
+            value: to,
+            onChange: (e) => setTo(e.target.value),
+            title: t('to'),
+            'aria-label': t('to')
+          }),
+          h(FieldInput, {
+            style: { minWidth: 160 },
+            placeholder: t('keyword'),
+            value: keyword,
+            onChange: (e) => setKeyword(e.target.value),
+            'aria-label': t('keyword')
           }),
           h(Btn, {
             primary: true, disabled: busy,
@@ -2460,13 +2646,20 @@ window.__ModuleLoader__.load({
       const [activeId, setActiveId] = useState(null)
       const [busy, setBusy] = useState(false)
       const [scheme, setScheme] = useState('light')
-      const [notice, setNotice] = useState(null)
-      const noticeSeq = React.useRef(0)
+      const [toast, setToast] = useState(null)
+      const toastSeq = React.useRef(0)
 
       const notify = useCallback((text, tone) => {
-        noticeSeq.current += 1
-        setNotice({ id: noticeSeq.current, text: String(text || ''), tone: tone === 'success' ? 'success' : 'error' })
+        toastSeq.current += 1
+        setToast({
+          id: toastSeq.current,
+          text: String(text || ''),
+          tone: tone === 'success' ? 'success' : 'error',
+          holdMs: tone === 'success' ? 3000 : 6000
+        })
       }, [])
+
+      const clearToast = useCallback(() => setToast(null), [])
 
       const refreshAccounts = useCallback(async () => {
         const data = await api('/api/accounts')
@@ -2493,14 +2686,46 @@ window.__ModuleLoader__.load({
         }
       }, [])
 
+      // 无官方 Toast 时的兜底：固定顶栏 + 定时关闭
       useEffect(() => {
-        if (!notice) return undefined
-        const timer = setTimeout(() => setNotice(null), notice.tone === 'error' ? 4500 : 3000)
+        if (!toast || UiToast) return undefined
+        const timer = setTimeout(clearToast, toast.holdMs || 4000)
         return () => clearTimeout(timer)
-      }, [notice])
+      }, [toast, clearToast])
+
+      const activeAccount = accounts.find((a) => a.id === activeId) || null
+      const activeMode = activeAccount && activeAccount.mode === 'local' ? 'local' : 'remote'
+
+      const toastNode = toast
+        ? (UiToast
+          ? h(UiToast, {
+              key: toast.id,
+              text: toast.text,
+              tone: toast.tone === 'success' ? 'success' : undefined,
+              holdMs: toast.holdMs,
+              onDone: clearToast
+            })
+          : (ReactDOM && ReactDOM.createPortal
+            ? ReactDOM.createPortal(
+                h('div', {
+                  key: toast.id,
+                  className: 'dsh-cj-toast-fallback',
+                  'data-tone': toast.tone,
+                  role: 'status'
+                }, toast.text),
+                document.body
+              )
+            : h('div', {
+                key: toast.id,
+                className: 'dsh-cj-toast-fallback',
+                'data-tone': toast.tone,
+                role: 'status'
+              }, toast.text)))
+        : null
 
       return h('div', { className: 'dsh-cj-root', 'data-scheme': scheme },
         h('style', null, CSS),
+        toastNode,
         h('div', { className: 'dsh-cj-tabs', role: 'tablist' },
           TABS.map((item) =>
             h('button', {
@@ -2515,14 +2740,13 @@ window.__ModuleLoader__.load({
           )
         ),
         h('div', { className: 'dsh-cj-body' },
-          notice
-            ? h('div', { className: 'dsh-cj-notice', 'data-tone': notice.tone, key: notice.id }, notice.text)
-            : null,
           tab === 'accounts' && h(AccountsPage, {
             t, accounts, activeId, busy, setBusy, notify,
             onChanged: refreshAccounts
           }),
-          tab === 'repos' && h(ReposPage, { t, accountId: activeId, busy, setBusy, notify }),
+          tab === 'repos' && h(ReposPage, {
+            t, accountId: activeId, accountMode: activeMode, busy, setBusy, notify
+          }),
           tab === 'commits' && h(CommitsPage, { t, accountId: activeId, busy, setBusy, notify }),
           tab === 'activity' && h(ActivityPage, { t, accountId: activeId, notify }),
           tab === 'logs' && h(LogsPage, { t, accountId: activeId, busy, setBusy, notify }),

@@ -17,7 +17,7 @@ export function resolveAccountId(accountId?: string): string {
   if (accounts.length === 1) return accounts[0].id
   if (accounts.length === 0) {
     throw new Error(
-      `本地无账号。请先调用 upsert_account 添加 Codeup 账号。数据目录：${getDataRoot()}`
+      `本地无账号。请先调用 upsert_account（mode=remote 或 local）。数据目录：${getDataRoot()}`
     )
   }
   throw new Error('存在多个账号，请先调用 list_accounts 后传入 accountId')
@@ -29,10 +29,12 @@ export function accountSummary() {
   return accounts.map((a) => ({
     id: a.id,
     name: a.name,
+    mode: a.mode,
     provider: a.provider,
     edition: a.edition,
     organizationId: a.organizationId,
     apiBaseUrl: a.apiBaseUrl,
+    localRoots: a.localRoots,
     authorFilters: a.authorFilters,
     defaultBranch: a.defaultBranch,
     watchedRepoCount: a.watchedRepoIds.length,

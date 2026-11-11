@@ -33,7 +33,7 @@ export function registerTools(ctx: Context): void {
     defineTool({
       name: 'list_accounts',
       description:
-        '列出本地 Commit Journal 账号（id、名称、provider、是否当前活跃）。总结工作前可先调用以确认 accountId。',
+        '列出 Commit Journal 账号（id、名称、mode=local|remote、provider、localRoots、是否当前活跃）。总结工作前可先调用以确认 accountId。',
       parameters: {},
       output: {
         schema: { type: 'string' },
@@ -55,18 +55,27 @@ export function registerTools(ctx: Context): void {
     defineTool({
       name: 'upsert_account',
       description:
-        '创建或更新 Codeup 账号。创建时不要传 id；更新时传 id。token 为云效个人访问令牌。',
+        '创建或更新账号。mode=remote（默认）走 Codeup PAT；mode=local 扫描 localRoots 下的本机 git 仓（无需 token）。创建时不要传 id；更新时传 id。',
       parameters: {
         id: { type: 'string', description: '已有账号 id；省略则新建' },
         name: { type: 'string', required: true, description: '账号显示名' },
+        mode: {
+          type: 'string',
+          description: 'remote | local；默认 remote'
+        },
         provider: {
           type: 'string',
-          description: 'codeup | gitlab | github（v1 仅 codeup）'
+          description: 'remote 时 codeup | gitlab | github（当前仅 codeup）；local 固定 local'
         },
-        edition: { type: 'string', description: 'central | region（Codeup）' },
+        edition: { type: 'string', description: 'central | region（Codeup remote）' },
         organizationId: { type: 'string', description: '中心版 organizationId' },
         apiBaseUrl: { type: 'string', description: 'Region 版 API Base URL' },
-        token: { type: 'string', description: 'PAT；更新时可省略表示不改' },
+        localRoots: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'local 模式扫描根目录列表'
+        },
+        token: { type: 'string', description: 'remote PAT；更新时可省略表示不改；local 不需要' },
         authorFilters: {
           type: 'array',
           items: { type: 'string' },
@@ -74,36 +83,49 @@ export function registerTools(ctx: Context): void {
         },
         defaultBranch: { type: 'string' },
         setActive: { type: 'boolean', description: '设为当前活跃账号' },
-        test: { type: 'boolean', description: '保存前测试连接，默认 true' }
+        test: { type: 'boolean', description: '保存前测试连接/扫描，默认 true' }
       },
       output: {
         schema: { type: 'string' },
         render: (_a, v) => [{ type: 'text', text: String(v) }]
       },
       async execute(args: Record<string, any>) {
-        const provider = (args.provider || 'codeup') as 'codeup' | 'gitlab' | 'github'
+        const mode = args.mode === 'local' ? 'local' : 'remote'
+        const provider = (
+          mode === 'local' ? 'local' : args.provider || 'codeup'
+        ) as 'codeup' | 'gitlab' | 'github' | 'local'
         const token = args.token?.trim()
+        const localRoots = Array.isArray(args.localRoots)
+          ? args.localRoots.map(String)
+          : undefined
         let account
         if (args.id) {
           account = updateAccount({
             id: String(args.id),
             name: args.name,
+            mode,
             provider,
             edition: args.edition,
             organizationId: args.organizationId,
             apiBaseUrl: args.apiBaseUrl,
+            localRoots,
             token,
             authorFilters: args.authorFilters,
             defaultBranch: args.defaultBranch
           })
         } else {
-          if (!token) throw new Error('新建账号必须提供 token')
+          if (mode === 'remote' && !token) throw new Error('远程账号新建必须提供 token')
+          if (mode === 'local' && !(localRoots && localRoots.length)) {
+            throw new Error('本地账号新建必须提供 localRoots')
+          }
           account = createAccount({
             name: args.name,
+            mode,
             provider,
             edition: args.edition || 'central',
             organizationId: args.organizationId,
             apiBaseUrl: args.apiBaseUrl,
+            localRoots,
             token,
             authorFilters: args.authorFilters || [],
             defaultBranch: args.defaultBranch
@@ -112,7 +134,7 @@ export function registerTools(ctx: Context): void {
         if (args.setActive !== false) setActiveAccountId(account.id)
         let testResult: { repoCount: number } | undefined
         if (args.test !== false) {
-          const t = getAccountToken(account.id)
+          const t = account.mode === 'local' ? '' : getAccountToken(account.id)
           testResult = await getProvider(account).testConnection(account, t)
         }
         return textOut(
@@ -122,8 +144,10 @@ export function registerTools(ctx: Context): void {
               account: {
                 id: account.id,
                 name: account.name,
+                mode: account.mode,
                 provider: account.provider,
-                edition: account.edition
+                edition: account.edition,
+                localRoots: account.localRoots
               },
               test: testResult
             },
@@ -146,8 +170,8 @@ export function registerTools(ctx: Context): void {
         schema: { type: 'string' },
         render: (_a, v) => [{ type: 'text', text: String(v) }]
       },
-      async execute(args: { accountId: string }) {
-        deleteAccount(args.accountId)
+      async execute(args: Record<string, any>) {
+        deleteAccount(String(args.accountId))
         return textOut(JSON.stringify({ ok: true, removed: args.accountId }))
       }
     })
@@ -156,7 +180,8 @@ export function registerTools(ctx: Context): void {
   ctx.tools.register(
     defineTool({
       name: 'sync_commits',
-      description: '增量同步指定账号的 Codeup 提交到本地。可先 upsert_account。',
+      description:
+        '增量同步指定账号的提交到本地缓存。remote=Codeup API；local=扫描根目录下 git log。可先 upsert_account。',
       parameters: {
         accountId: { type: 'string' },
         repoIds: { type: 'array', items: { type: 'string' }, description: '可选，限制仓库' }
@@ -176,14 +201,18 @@ export function registerTools(ctx: Context): void {
   ctx.tools.register(
     defineTool({
       name: 'list_repos',
-      description: '列出某账号下已有提交记录的仓库（或本地缓存的全部仓库）。',
+      description:
+        '列出某账号下已有提交记录的仓库（或缓存的全部仓库）。refresh=true 时 remote 拉 API / local 重扫根目录。',
       parameters: {
         accountId: { type: 'string' },
         withCommitsOnly: {
           type: 'boolean',
           description: '默认 true，仅返回已有提交的仓库'
         },
-        refresh: { type: 'boolean', description: '是否先从远端刷新仓库列表' }
+        refresh: {
+          type: 'boolean',
+          description: '是否先刷新仓库列表（remote API 或 local 扫描）'
+        }
       },
       output: {
         schema: { type: 'string' },

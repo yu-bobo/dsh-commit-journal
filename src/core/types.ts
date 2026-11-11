@@ -1,10 +1,14 @@
-export type VcsProviderId = 'codeup' | 'gitlab' | 'github'
+export type VcsProviderId = 'codeup' | 'gitlab' | 'github' | 'local'
 
 export type OrgEdition = 'central' | 'region'
+
+// remote = Codeup API；local = 扫描本机 git 根目录
+export type AccountMode = 'local' | 'remote'
 
 export interface Account {
   id: string
   name: string
+  mode: AccountMode
   provider: VcsProviderId
   // Codeup: central | region
   edition?: OrgEdition
@@ -12,6 +16,8 @@ export interface Account {
   organizationId?: string
   // Codeup region / GitLab / GitHub Enterprise API base
   apiBaseUrl?: string
+  // local 模式：扫描根目录（绝对或可解析路径）
+  localRoots?: string[]
   // Author filter (email or name, compared lowercased)
   authorFilters: string[]
   defaultBranch: string
@@ -25,11 +31,14 @@ export interface Account {
 
 export interface AccountInput {
   name: string
+  mode?: AccountMode
   provider?: VcsProviderId
   edition?: OrgEdition
   organizationId?: string
   apiBaseUrl?: string
-  token: string
+  localRoots?: string[]
+  // remote 必填；local 可省略
+  token?: string
   authorFilters?: string[]
   defaultBranch?: string
   watchedRepoIds?: string[]

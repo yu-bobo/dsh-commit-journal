@@ -77,8 +77,9 @@ export async function syncAccount(
   try {
     const account = getAccount(accountId)
     if (!account) throw new Error('账号不存在')
-    const token = getAccountToken(accountId)
+    const token = account.mode === 'local' ? '' : getAccountToken(accountId)
     const provider = getProvider(account)
+    const isLocal = account.mode === 'local'
 
     const onlyIds =
       repoIds && repoIds.length > 0 ? Array.from(new Set(repoIds.map(String))) : null
@@ -89,8 +90,10 @@ export async function syncAccount(
       at: new Date().toISOString(),
       level: 'info',
       message: onlyIds
-        ? `开始同步指定仓库（${onlyIds.length} 个）`
-        : '开始同步全部关注仓库'
+        ? `${isLocal ? '开始扫描指定仓库' : '开始同步指定仓库'}（${onlyIds.length} 个）`
+        : isLocal
+          ? '开始扫描关注的本地仓库'
+          : '开始同步全部关注仓库'
     })
 
     let repos = db.listRepos(accountId)

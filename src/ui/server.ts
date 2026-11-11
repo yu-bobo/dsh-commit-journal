@@ -55,10 +55,12 @@ function accountPublic(a: ReturnType<typeof listAccounts>[number], activeId: str
   return {
     id: a.id,
     name: a.name,
+    mode: a.mode,
     provider: a.provider,
     edition: a.edition,
     organizationId: a.organizationId,
     apiBaseUrl: a.apiBaseUrl,
+    localRoots: a.localRoots || [],
     authorFilters: a.authorFilters,
     defaultBranch: a.defaultBranch,
     watchedRepoIds: a.watchedRepoIds,
@@ -116,12 +118,19 @@ async function handler(req: IncomingMessage, res: ServerResponse): Promise<void>
 
     if (method === 'POST' && url.pathname === '/api/accounts') {
       const body = await readJson(req)
+      const mode = body.mode === 'local' ? 'local' : 'remote'
       const account = createAccount({
         name: body.name,
-        provider: body.provider || 'codeup',
+        mode,
+        provider: mode === 'local' ? 'local' : body.provider || 'codeup',
         edition: body.edition || 'central',
         organizationId: body.organizationId,
         apiBaseUrl: body.apiBaseUrl,
+        localRoots: Array.isArray(body.localRoots)
+          ? body.localRoots
+          : typeof body.localRootsText === 'string'
+            ? String(body.localRootsText).split(/\r?\n/)
+            : undefined,
         token: body.token,
         authorFilters: body.authorFilters || [],
         defaultBranch: body.defaultBranch,
@@ -131,7 +140,7 @@ async function handler(req: IncomingMessage, res: ServerResponse): Promise<void>
       if (body.setActive !== false) setActiveAccountId(account.id)
       let test: { repoCount: number } | undefined
       if (body.test !== false) {
-        const token = getAccountToken(account.id)
+        const token = account.mode === 'local' ? '' : getAccountToken(account.id)
         test = await getProvider(account).testConnection(account, token)
       }
       sendJson(res, 200, {
@@ -149,10 +158,16 @@ async function handler(req: IncomingMessage, res: ServerResponse): Promise<void>
           const account = updateAccount({
             id: m.id,
             name: body.name,
+            mode: body.mode,
             provider: body.provider,
             edition: body.edition,
             organizationId: body.organizationId,
             apiBaseUrl: body.apiBaseUrl,
+            localRoots: Array.isArray(body.localRoots)
+              ? body.localRoots
+              : typeof body.localRootsText === 'string'
+                ? String(body.localRootsText).split(/\r?\n/)
+                : undefined,
             token: body.token,
             authorFilters: body.authorFilters,
             defaultBranch: body.defaultBranch,
@@ -185,7 +200,7 @@ async function handler(req: IncomingMessage, res: ServerResponse): Promise<void>
       if (m && method === 'POST') {
         const account = getAccount(m.id)
         if (!account) return sendJson(res, 404, { error: '账号不存在' })
-        const token = getAccountToken(m.id)
+        const token = account.mode === 'local' ? '' : getAccountToken(m.id)
         const test = await getProvider(account).testConnection(account, token)
         sendJson(res, 200, { ok: true, ...test })
         return
