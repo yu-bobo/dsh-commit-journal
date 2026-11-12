@@ -7,12 +7,12 @@ DeepSeek Harness (`dsh`) 插件：按账号选择 **远程拉取**（Codeup / Gi
 | 双模式账号 | **remote**：平台 PAT 拉仓；**local**：手填根目录扫 `.git`，无需令牌 |
 | 多账号 | 本机加密存放 PAT（仅 remote）；local 只存根路径 |
 | 增量同步 | 按关注仓库 / 作者过滤；定时任务两种模式共用 |
-| 面板 | 账号 · 仓库 · 提交 · 活跃 · 日志 · 设置（文案随当前账号模式变化） |
+| 面板 | 账号 · 仓库 · 提交 · 活跃 · 日志 · 设置 |
 | Provider | **remote：Codeup / GitLab（含自建） / GitHub（含 GHE）**；**local：本机 git** |
 
-侧栏打开「提交日志」即可使用。与桌面端 [codeup-journal](https://github.com/yu-bobo/codeup-journal) 功能同源（远程侧），数据目录独立。
+侧栏打开「提交日志」即可使用。
 
-**定位**：适合「未 clone / 不想逐仓告知路径」的跨仓提交材料，或「本机多根目录批量索引」。若只需当前工作区一条 `git log`，不必装本插件；若要钉钉+云效工作台全家桶，见社区 WorkHub 等产品。
+**定位**：适合「未 clone / 不想逐仓告知路径」的跨仓提交材料，或「本机多根目录批量索引」。
 
 ## 安装
 
@@ -65,11 +65,33 @@ dsh plugin --profile web add link:<本仓库路径>
 
 个人访问令牌至少：代码仓库、提交 → 只读。建议同时：代码组、分支 → 只读。改权限后请新建令牌。
 
+## 提交信息格式
+
+写代码时建议按 [git-commit](https://github.com/yu-bobo/awesome-skills/tree/master/git-commit) 规范提交，正文写清「做了什么 / 影响范围」，便于后续从提交材料改写日/周/月报：
+
+```text
+type(scope): [TICKET-ID] 简述
+
+- 详细说明 1
+- 详细说明 2
+- 影响范围：...
+```
+
+示例：
+
+```text
+feat(smart-patrol): H5 今日任务对接分页并触底无限加载
+
+- 列表接口改为分页请求，首次加载 + 触底加载更多
+- 加载完毕展示无更多数据提示
+- 影响智能巡检 H5 今日任务列表页
+```
+
 ## Agent 能做什么
 
 插件把同步到的提交交给 Agent 工具调用。适合：
 
-- 写日报 / 周报 / 月报（按提交材料改写）
+- 写日报 / 周报 / 月报（按提交材料改写，保留具体功能点与影响范围）
 - 查某段时间、某个仓库、某个关键词的提交
 - 看活跃热力、某天具体改了什么
 - 先同步再汇总（数据以本地缓存为准）
@@ -92,7 +114,7 @@ dsh plugin --profile web add link:<本仓库路径>
 ## 可直接对 Agent 说的提示词
 
 ```text
-先 list_accounts，用当前账号 sync_commits，再给我昨天的工作日报（get_period_report kind=day）。
+先 list_accounts，用当前账号 sync_commits，再给我昨天的工作日报（get_period_report kind=day）。按提交正文里的功能点与影响范围改写，不要只列 commit 标题。
 ```
 
 ```text
@@ -104,7 +126,7 @@ dsh plugin --profile web add link:<本仓库路径>
 ```
 
 ```text
-查本周我在各仓库的提交，按仓库分组总结做了什么（query_commits + 必要时 get_period_report kind=week）。
+查本周我在各仓库的提交，按仓库分组总结做了什么（query_commits + 必要时 get_period_report kind=week）。输出保留具体改动点与影响范围。
 ```
 
 建议流程：`list_accounts` →（缺数据则）`sync_commits` → `query_commits` / `get_period_report` / `get_activity_heatmap`。
