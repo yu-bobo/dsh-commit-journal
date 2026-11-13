@@ -66,6 +66,7 @@
   "scripts": {
     "build": "tsdown",
     "prepare": "npm run build",
+    "prepack": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "tsdown --watch"
   },

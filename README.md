@@ -16,6 +16,14 @@ DeepSeek Harness (`dsh`) 插件：按账号选择 **远程拉取**（Codeup / Gi
 
 ## 安装
 
+推荐（npm）：
+
+```sh
+dsh plugin --profile web add dsh-commit-journal
+```
+
+或从 GitHub / Release tarball：
+
 ```sh
 dsh plugin --profile web add github:yu-bobo/dsh-commit-journal
 ```
