@@ -14,6 +14,10 @@ DeepSeek Harness (`dsh`) 插件：按账号选择 **远程拉取**（Codeup / Gi
 
 **定位**：适合「未 clone / 不想逐仓告知路径」的跨仓提交材料，或「本机多根目录批量索引」。
 
+![账号面板](assets/screenshot-accounts.png)
+
+![活跃热力图](assets/screenshot-activity.png)
+
 ## 安装
 
 推荐（npm）：
