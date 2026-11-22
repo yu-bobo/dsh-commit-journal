@@ -7,7 +7,7 @@ window.__ModuleLoader__.load({
   factory(require) {
     const React = require('react')
     const h = React.createElement
-    const { useCallback, useEffect, useMemo, useRef, useState } = React
+    const { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } = React
     let ReactDOM = null
     try { ReactDOM = require('react-dom') } catch { ReactDOM = null }
 
@@ -126,6 +126,9 @@ window.__ModuleLoader__.load({
         defaultBranchPh: 'master / main / develop',
         watched: 'Watched',
         branch: 'Branch',
+        branchFilterPh: 'Filter branches',
+        branchLoading: 'Loading branches…',
+        branchNoMatch: 'No matching branches',
         time: 'Time',
         repo: 'Repo',
         title: 'Message',
@@ -283,6 +286,9 @@ window.__ModuleLoader__.load({
         defaultBranchPh: 'master / main / develop',
         watched: '关注',
         branch: '分支',
+        branchFilterPh: '过滤分支',
+        branchLoading: '分支加载中…',
+        branchNoMatch: '没有匹配的分支',
         time: '时间',
         repo: '仓库',
         title: '说明',
@@ -622,6 +628,52 @@ window.__ModuleLoader__.load({
         background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1));
         box-shadow: var(--dsw-elevation-prominent, 0 8px 24px rgba(0,0,0,.18));
       }
+      /* 表体内的下拉挂在表体层，滚动时从下方穿过表头，不会盖住表头 */
+      .dsh-cj-select-menu.is-bound {
+        position: absolute;
+        z-index: 2;
+      }
+      .dsh-cj-select-menu.is-filterable {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 0;
+      }
+      .dsh-cj-select-filter {
+        flex: none;
+        padding: 6px;
+        border-bottom: 1px solid var(--dsh-cj-border);
+      }
+      .dsh-cj-select-filter .dsh-cj-input {
+        display: block;
+        width: 100%;
+        height: 28px;
+        min-height: 28px;
+      }
+      .dsh-cj-select-list {
+        overflow: auto;
+        min-height: 0;
+        padding: 4px;
+      }
+      .dsh-cj-select-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px;
+        color: var(--dsw-alias-label-secondary);
+        font-size: 12px;
+        line-height: 18px;
+      }
+      .dsh-cj-select-spin {
+        width: 14px;
+        height: 14px;
+        flex: none;
+        border-radius: 50%;
+        border: 2px solid var(--dsh-cj-border);
+        border-top-color: var(--dsw-alias-brand-primary, #1677ff);
+        animation: dsh-cj-spin 0.7s linear infinite;
+      }
+      @keyframes dsh-cj-spin { to { transform: rotate(360deg); } }
       .dsh-cj-select-option {
         appearance: none;
         display: block;
@@ -738,18 +790,42 @@ window.__ModuleLoader__.load({
         line-height: 1.55;
       }
       .dsh-cj-error { color: var(--dsw-alias-state-error-primary); font-size: 12px; margin: 0 0 10px; }
+      /* 表头固定在滚动区外；滚动条只出现在表体 */
       .dsh-cj-table-wrap {
         flex: 1;
         min-height: 0;
         border: 1px solid var(--dsh-cj-border);
         border-radius: 12px;
-        overflow: auto;
+        overflow: hidden;
         background: var(--dsw-alias-bg-layer-1);
+        display: flex;
+        flex-direction: column;
       }
       .dsh-cj-page-scroll > .dsh-cj-table-wrap {
         flex: initial;
         min-height: auto;
         max-height: none;
+      }
+      .dsh-cj-table-head {
+        flex: none;
+        overflow: hidden;
+        position: relative;
+        z-index: 5;
+        background: var(--dsw-alias-bg-layer-2);
+        border-bottom: 1px solid var(--dsh-cj-border);
+      }
+      .dsh-cj-table-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
+        position: relative;
+        z-index: 1;
+      }
+      /* 账号页整页滚动，表格随内容增高，不单独出滚动条 */
+      .dsh-cj-page-scroll .dsh-cj-table-body {
+        flex: none;
+        min-height: auto;
+        overflow: visible;
       }
       .dsh-cj-table { width: 100%; border-collapse: collapse; }
       .dsh-cj-table th, .dsh-cj-table td {
@@ -757,15 +833,17 @@ window.__ModuleLoader__.load({
         text-align: left;
         border-bottom: 1px solid var(--dsh-cj-border);
         vertical-align: top;
+        overflow-wrap: anywhere;
       }
       .dsh-cj-table th {
         font-weight: 600;
         color: var(--dsw-alias-label-secondary);
         background: var(--dsw-alias-bg-layer-2);
-        position: sticky;
-        top: 0;
+        border-bottom: 0;
       }
       .dsh-cj-table tr:last-child td { border-bottom: 0; }
+      .dsh-cj-table-wrap .dsh-cj-td-clip { max-width: none; }
+      .dsh-cj-table .dsh-cj-td-actions { overflow-wrap: normal; }
       /* Fallback Tag tones (match official Tag.module.css) */
       .dsh-cj-tag {
         display: inline-flex;
@@ -1248,14 +1326,26 @@ window.__ModuleLoader__.load({
       className,
       placeholder,
       onOpen,
+      boundScroll,
+      filterable,
+      filterPlaceholder,
+      loading,
+      loadingLabel,
+      emptyLabel,
       'aria-label': ariaLabel,
       title
     }) {
       const [open, setOpen] = useState(false)
+      const [query, setQuery] = useState('')
       const anchorRef = useRef(null)
       const menuRef = useRef(null)
+      const filterRef = useRef(null)
       const [menuStyle, setMenuStyle] = useState(null)
       const list = options || []
+      const q = filterable ? query.trim().toLowerCase() : ''
+      const shown = q
+        ? list.filter((o) => String(o.label || '').toLowerCase().includes(q) || String(o.value || '').toLowerCase().includes(q))
+        : list
       const selected = list.find((o) => String(o.value) === String(value))
       const label = selected ? selected.label : (placeholder || '')
 
@@ -1273,12 +1363,62 @@ window.__ModuleLoader__.load({
       }, [onChange])
 
       useEffect(() => {
-        if (!open || UiMenu) return undefined
+        if (!open) setQuery('')
+      }, [open])
+
+      const filterFocused = useRef(false)
+      useEffect(() => {
+        if (!open) {
+          filterFocused.current = false
+          return undefined
+        }
+        if (!filterable || !menuStyle || filterFocused.current) return undefined
+        const id = requestAnimationFrame(() => {
+          const input = filterRef.current
+          if (!input) return
+          input.focus({ preventScroll: true })
+          filterFocused.current = true
+        })
+        return () => cancelAnimationFrame(id)
+      }, [open, filterable, menuStyle])
+
+      useEffect(() => {
+        if (!open || (UiMenu && !boundScroll)) return undefined
         const place = () => {
           const el = anchorRef.current
           if (!el) return
-          const root = el.closest('.dsh-cj-root') || document.body
+          const scrollBody = boundScroll ? el.closest('.dsh-cj-table-body') : null
           const a = el.getBoundingClientRect()
+          if (scrollBody) {
+            const b = scrollBody.getBoundingClientRect()
+            if (a.bottom <= b.top || a.top >= b.bottom) {
+              close()
+              return
+            }
+            const width = Math.max(a.width, filterable ? 220 : 120)
+            const rows = loading ? 1 : list.length
+            const chrome = filterable ? 44 : 0
+            const estimate = Math.min(280, Math.max(rows * 38 + 8 + chrome, 40 + chrome))
+            const spaceBelow = Math.max(0, b.bottom - a.bottom - 8)
+            const spaceAbove = Math.max(0, a.top - b.top - 8)
+            let topVp = a.bottom + 4
+            let height = Math.min(estimate, Math.max(spaceBelow, 40))
+            if (spaceBelow < Math.min(estimate, 120) && spaceAbove > spaceBelow) {
+              height = Math.min(estimate, Math.max(spaceAbove, 40))
+              topVp = a.top - 4 - height
+            }
+            // 不把弹出层钉在可视区顶部：它跟行一起滚，越过表头时由表头盖住
+            const leftVp = Math.min(Math.max(a.left, b.left), Math.max(b.left, b.right - width))
+            setMenuStyle({
+              position: 'absolute',
+              left: Math.round(leftVp - b.left + scrollBody.scrollLeft) + 'px',
+              top: Math.round(topVp - b.top + scrollBody.scrollTop) + 'px',
+              width: Math.round(width) + 'px',
+              maxHeight: Math.round(height) + 'px'
+            })
+            return
+          }
+          const root = el.closest('.dsh-cj-root') || document.body
           const bound = root.getBoundingClientRect()
           const width = Math.max(a.width, 120)
           const maxH = Math.min(280, Math.max(120, bound.height - 16))
@@ -1288,6 +1428,7 @@ window.__ModuleLoader__.load({
             top = Math.max(bound.top + 8, a.top - 4 - Math.min(maxH, list.length * 32 + 12))
           }
           setMenuStyle({
+            position: 'fixed',
             left: Math.round(left) + 'px',
             top: Math.round(top) + 'px',
             width: Math.round(width) + 'px',
@@ -1312,7 +1453,7 @@ window.__ModuleLoader__.load({
           document.removeEventListener('mousedown', onDoc, true)
           document.removeEventListener('keydown', onKey, true)
         }
-      }, [close, list.length, open])
+      }, [boundScroll, close, filterable, list.length, loading, open])
 
       const trigger = h('button', {
         ref: anchorRef,
@@ -1332,7 +1473,7 @@ window.__ModuleLoader__.load({
         )
       )
 
-      if (UiMenu) {
+      if (UiMenu && !boundScroll) {
         const emptyId = '__dsh_cj_empty__'
         const toId = (v) => (v == null || v === '' ? emptyId : String(v))
         const fromId = (id) => {
@@ -1388,32 +1529,67 @@ window.__ModuleLoader__.load({
         })
       }
 
+      const scrollBody = boundScroll && anchorRef.current
+        ? anchorRef.current.closest('.dsh-cj-table-body')
+        : null
+      const optionNodes = shown.map((o) =>
+        h('button', {
+          key: String(o.value),
+          type: 'button',
+          role: 'option',
+          className: 'dsh-cj-select-option',
+          disabled: !!o.disabled,
+          'data-selected': String(o.value) === String(value) ? '1' : '0',
+          'aria-selected': String(o.value) === String(value),
+          onClick: () => pick(o.value)
+        }, o.label)
+      )
+      const menuBody = loading
+        ? h('div', { className: 'dsh-cj-select-status', role: 'status' },
+            h('span', { className: 'dsh-cj-select-spin', 'aria-hidden': true }),
+            loadingLabel || '…'
+          )
+        : (optionNodes.length
+            ? optionNodes
+            : (filterable
+                ? h('div', { className: 'dsh-cj-select-status' }, emptyLabel || '—')
+                : null))
       const menu = open && menuStyle
         ? h('div', {
             ref: menuRef,
-            className: 'dsh-cj-select-menu',
+            className: [
+              'dsh-cj-select-menu',
+              scrollBody ? 'is-bound' : '',
+              filterable ? 'is-filterable' : ''
+            ].filter(Boolean).join(' '),
             role: 'listbox',
-            style: menuStyle
+            style: menuStyle,
+            onWheel: scrollBody ? (e) => e.stopPropagation() : undefined
           },
-            list.map((o) =>
-              h('button', {
-                key: String(o.value),
-                type: 'button',
-                role: 'option',
-                className: 'dsh-cj-select-option',
-                disabled: !!o.disabled,
-                'data-selected': String(o.value) === String(value) ? '1' : '0',
-                'aria-selected': String(o.value) === String(value),
-                onClick: () => pick(o.value)
-              }, o.label)
-            )
+            filterable
+              ? h('div', { className: 'dsh-cj-select-filter' },
+                  h('input', {
+                    ref: filterRef,
+                    className: 'dsh-cj-input',
+                    type: 'text',
+                    value: query,
+                    placeholder: filterPlaceholder || '',
+                    'aria-label': filterPlaceholder || ariaLabel,
+                    onChange: (e) => setQuery(e.target.value)
+                  })
+                )
+              : null,
+            filterable
+              ? h('div', { className: 'dsh-cj-select-list' }, menuBody)
+              : menuBody
           )
         : null
 
+      const portalNode = scrollBody || document.body
       return h(React.Fragment, null,
         trigger,
         menu && ReactDOM && ReactDOM.createPortal
-          ? ReactDOM.createPortal(menu, document.body)
+          ? ReactDOM.createPortal(menu, portalNode)
           : menu
       )
     }
@@ -1759,6 +1935,121 @@ window.__ModuleLoader__.load({
       }
     }
 
+    /**
+     * 表头固定、仅表体滚动的表格
+     */
+    function TableScroll({ head, children }) {
+      const headRef = useRef(null)
+      const bodyRef = useRef(null)
+
+      useLayoutEffect(() => {
+        const headEl = headRef.current
+        const bodyEl = bodyRef.current
+        if (!headEl || !bodyEl) return undefined
+
+        const measureRow = (table) => {
+          table.style.tableLayout = 'auto'
+          table.style.width = 'max-content'
+          table.querySelectorAll('th,td').forEach((cell) => { cell.style.width = '' })
+          const row = (table.tHead && table.tHead.rows[0]) || table.rows[0]
+          if (!row) return []
+          return Array.from(row.cells).map((cell) => cell.getBoundingClientRect().width)
+        }
+
+        const fitColumns = (cols, target) => {
+          const n = cols.length
+          if (!n || target <= 0) return cols
+          const lock = cols.map((w, i) => i === n - 1 || w < 200)
+          let locked = 0
+          let flexSum = 0
+          cols.forEach((w, i) => {
+            if (lock[i]) locked += w
+            else flexSum += w
+          })
+          if (locked >= target || flexSum <= 0) {
+            const sum = cols.reduce((a, b) => a + b, 0) || 1
+            const out = cols.map((w) => Math.floor((target * w) / sum))
+            out[n - 1] = target - out.slice(0, -1).reduce((a, b) => a + b, 0)
+            return out
+          }
+          const remain = target - locked
+          const out = cols.slice()
+          let used = 0
+          const flexIdx = []
+          cols.forEach((w, i) => { if (!lock[i]) flexIdx.push(i) })
+          flexIdx.forEach((i, k) => {
+            const next = k === flexIdx.length - 1
+              ? remain - used
+              : Math.floor((remain * cols[i]) / flexSum)
+            out[i] = next
+            used += next
+          })
+          return out
+        }
+
+        const apply = (table, cols) => {
+          table.style.tableLayout = 'fixed'
+          table.style.width = '100%'
+          const row = (table.tHead && table.tHead.rows[0]) || table.rows[0]
+          if (!row) return
+          Array.from(row.cells).forEach((cell, i) => {
+            if (cols[i] > 0) cell.style.width = cols[i] + 'px'
+          })
+        }
+
+        let running = false
+        const sync = () => {
+          if (running) return
+          running = true
+          try {
+            const headTable = headEl.querySelector('table')
+            const bodyTable = bodyEl.querySelector('table')
+            if (!headTable || !bodyTable) return
+            for (let pass = 0; pass < 2; pass++) {
+              const sb = bodyEl.offsetWidth - bodyEl.clientWidth
+              headEl.style.paddingRight = sb > 0 ? sb + 'px' : ''
+              const target = bodyEl.clientWidth
+              if (!target) return
+              const headW = measureRow(headTable)
+              const bodyW = measureRow(bodyTable)
+              const n = Math.max(headW.length, bodyW.length)
+              if (!n) return
+              const natural = []
+              for (let i = 0; i < n; i++) natural.push(Math.ceil(Math.max(headW[i] || 0, bodyW[i] || 0)))
+              const cols = fitColumns(natural, target)
+              apply(headTable, cols)
+              apply(bodyTable, cols)
+              if (bodyEl.offsetWidth - bodyEl.clientWidth === sb) break
+            }
+            if (headEl.scrollLeft !== bodyEl.scrollLeft) headEl.scrollLeft = bodyEl.scrollLeft
+          } finally {
+            running = false
+          }
+        }
+
+        sync()
+        const ro = new ResizeObserver(sync)
+        ro.observe(bodyEl)
+        const onScroll = () => {
+          if (headEl.scrollLeft !== bodyEl.scrollLeft) headEl.scrollLeft = bodyEl.scrollLeft
+        }
+        bodyEl.addEventListener('scroll', onScroll, { passive: true })
+        return () => {
+          ro.disconnect()
+          bodyEl.removeEventListener('scroll', onScroll)
+        }
+      }, [head, children])
+
+      return h('div', { className: 'dsh-cj-table-wrap' },
+        h('div', { className: 'dsh-cj-table-head', ref: headRef },
+          h('table', { className: 'dsh-cj-table' }, head)
+        ),
+        h('div', { className: 'dsh-cj-table-body', ref: bodyRef },
+          h('table', { className: 'dsh-cj-table' }, children)
+        )
+      )
+    }
+
     function AccountsPage({ t, accounts, activeId, onChanged, busy, setBusy, notify }) {
       const [modal, setModal] = useState(null)
       const [form, setForm] = useState(emptyForm())
@@ -1852,17 +2143,16 @@ window.__ModuleLoader__.load({
             : h('div', { className: 'dsh-cj-muted' }, t('emptyAccount')),
           h(Btn, { primary: true, icon: IconPlus ? h(IconPlus) : null, onClick: openNew }, t('newAccount'))
         ),
-        h('div', { className: 'dsh-cj-table-wrap' },
-          h('table', { className: 'dsh-cj-table' },
-            h('thead', null, h('tr', null,
-              h('th', null, t('name')),
-              h('th', null, t('accountMode')),
-              h('th', null, t('provider')),
-              h('th', null, t('org')),
-              h('th', null, t('authors')),
-              h('th', null, '')
-            )),
-            h('tbody', null, accounts.map((a) =>
+        h(TableScroll, {
+          head: h('thead', null, h('tr', null,
+            h('th', null, t('name')),
+            h('th', null, t('accountMode')),
+            h('th', null, t('provider')),
+            h('th', null, t('org')),
+            h('th', null, t('authors')),
+            h('th', null, '')
+          )),
+          children: h('tbody', null, accounts.map((a) =>
               h('tr', { key: a.id },
                 h('td', null,
                   a.name, ' ',
@@ -1945,8 +2235,7 @@ window.__ModuleLoader__.load({
                 )
               )
             ))
-          )
-        ),
+        }),
         h(AccountModal, {
           open: !!modal,
           mode: modal,
@@ -1995,9 +2284,14 @@ window.__ModuleLoader__.load({
       return h(SelectField, {
         style: { width: 160 },
         value: current,
-        disabled: loading,
-        title: loading ? '…' : t('branch'),
+        title: t('branch'),
         'aria-label': t('branch'),
+        boundScroll: true,
+        filterable: true,
+        filterPlaceholder: t('branchFilterPh'),
+        loading,
+        loadingLabel: t('branchLoading'),
+        emptyLabel: t('branchNoMatch'),
         onOpen: () => { ensureLoaded().catch(() => {}) },
         options: list.map((name) => ({
           value: name,
@@ -2136,15 +2430,14 @@ window.__ModuleLoader__.load({
             }, isLocal ? t('syncWatchedLocal') : t('syncWatched'))
           )
         ),
-        h('div', { className: 'dsh-cj-table-wrap' },
-          h('table', { className: 'dsh-cj-table' },
-            h('thead', null, h('tr', null,
-              h('th', null, t('watched')),
-              h('th', null, t('repo')),
-              h('th', null, t('branch')),
-              h('th', null, '')
-            )),
-            h('tbody', null, pageRepos.map((r) => {
+        h(TableScroll, {
+          head: h('thead', null, h('tr', null,
+            h('th', null, t('watched')),
+            h('th', null, t('repo')),
+            h('th', null, t('branch')),
+            h('th', null, '')
+          )),
+          children: h('tbody', null, pageRepos.map((r) => {
               const checked = isWatched(r.id)
               return h('tr', { key: r.id },
                 h('td', null,
@@ -2204,8 +2497,7 @@ window.__ModuleLoader__.load({
                 )
               )
             }))
-          )
-        ),
+        }),
         h(TablePager, {
           t,
           total: filtered.length,
@@ -2329,27 +2621,25 @@ window.__ModuleLoader__.load({
             }
           }, t('clearCommits'))
         ),
-        h('div', { className: 'dsh-cj-table-wrap' },
-          h('table', { className: 'dsh-cj-table' },
-            h('thead', null, h('tr', null,
-              h('th', null, t('time')), h('th', null, t('repo')), h('th', null, t('title')),
-              h('th', null, t('author')), h('th', null, t('sha'))
-            )),
-            h('tbody', null, items.map((c) =>
-              h('tr', { key: c.id },
-                h('td', null, (c.committedAt || '').slice(0, 16).replace('T', ' ')),
-                h('td', null, shortRepoLabel(c.repoName)),
-                h('td', null, c.title),
-                h('td', null, c.authorName),
-                h('td', null,
-                  c.webUrl
-                    ? h('a', { className: 'dsh-cj-link', href: c.webUrl, target: '_blank', rel: 'noreferrer' }, c.shortId)
-                    : c.shortId
-                )
+        h(TableScroll, {
+          head: h('thead', null, h('tr', null,
+            h('th', null, t('time')), h('th', null, t('repo')), h('th', null, t('title')),
+            h('th', null, t('author')), h('th', null, t('sha'))
+          )),
+          children: h('tbody', null, items.map((c) =>
+            h('tr', { key: c.id },
+              h('td', null, (c.committedAt || '').slice(0, 16).replace('T', ' ')),
+              h('td', null, shortRepoLabel(c.repoName)),
+              h('td', null, c.title),
+              h('td', null, c.authorName),
+              h('td', null,
+                c.webUrl
+                  ? h('a', { className: 'dsh-cj-link', href: c.webUrl, target: '_blank', rel: 'noreferrer' }, c.shortId)
+                  : c.shortId
               )
-            ))
-          )
-        ),
+            )
+          ))
+        }),
         h(TablePager, {
           t,
           total,
@@ -2747,20 +3037,18 @@ window.__ModuleLoader__.load({
             }
           }, t('clearLogs'))
         ),
-        h('div', { className: 'dsh-cj-table-wrap' },
-          h('table', { className: 'dsh-cj-table' },
-            h('thead', null, h('tr', null,
-              h('th', null, t('level')), h('th', null, t('time')), h('th', null, t('message'))
-            )),
-            h('tbody', null, items.map((l) =>
-              h('tr', { key: l.id },
-                h('td', null, logLevelTag(t, l.level)),
-                h('td', null, (l.at || '').replace('T', ' ').slice(0, 19)),
-                h('td', null, l.message)
-              )
-            ))
-          )
-        ),
+        h(TableScroll, {
+          head: h('thead', null, h('tr', null,
+            h('th', null, t('level')), h('th', null, t('time')), h('th', null, t('message'))
+          )),
+          children: h('tbody', null, items.map((l) =>
+            h('tr', { key: l.id },
+              h('td', null, logLevelTag(t, l.level)),
+              h('td', null, (l.at || '').replace('T', ' ').slice(0, 19)),
+              h('td', null, l.message)
+            )
+          ))
+        }),
         h(TablePager, {
           t,
           total,
