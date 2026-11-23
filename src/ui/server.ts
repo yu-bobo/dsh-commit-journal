@@ -423,7 +423,10 @@ async function handler(req: IncomingMessage, res: ServerResponse): Promise<void>
         exportsPath: body.exportsPath,
         syncIntervalMinutes: body.syncIntervalMinutes,
         syncLookbackDays: body.syncLookbackDays,
-        uiPort: body.uiPort
+        uiPort: body.uiPort,
+        reportExcludeMerge: body.reportExcludeMerge,
+        reportExcludeTypes: body.reportExcludeTypes,
+        reportExcludeAuthors: body.reportExcludeAuthors
       })
       sendJson(res, 200, { ok: true, settings: describeSettings(), saved: next })
       return

@@ -106,12 +106,26 @@ export interface SyncResult {
 
 export type ReportKind = 'day' | 'week' | 'month' | 'custom'
 
+// repo = 按仓库（默认）；day = 按日再按仓库；flat = 接近旧版流水
+export type ReportGroupBy = 'repo' | 'day' | 'flat'
+
 export interface ReportRequest {
   accountId: string
   kind: ReportKind
   date?: string
   from?: string
   to?: string
+  groupBy?: ReportGroupBy
+  // 覆盖设置；省略则用 settings.reportExcludeMerge（默认 true）
+  excludeMerge?: boolean
+  // 周/月报是否附出勤对照；默认 true
+  includeAttendance?: boolean
+}
+
+export interface ReportExclusionStats {
+  merge: number
+  type: number
+  author: number
 }
 
 export interface ReportResult {
@@ -119,6 +133,8 @@ export interface ReportResult {
   markdown: string
   filePath?: string
   commitCount: number
+  rawCommitCount?: number
+  excluded?: ReportExclusionStats
   statutoryWorkdays?: number
 }
 
@@ -148,8 +164,15 @@ export interface AppSettings {
   syncIntervalMinutes: number
   syncLookbackDays: number
   uiPort: number
+  // 报告默认排除 merge；缺省视为 true
+  reportExcludeMerge?: boolean
+  // conventional type 黑名单（如 chore、ci）；默认空
+  reportExcludeTypes?: string[]
+  // 作者名/邮箱子串黑名单；默认空
+  reportExcludeAuthors?: string[]
 }
 
 export const DEFAULT_SYNC_INTERVAL_MINUTES = 30
 export const DEFAULT_SYNC_LOOKBACK_DAYS = 90
 export const DEFAULT_UI_PORT = 39282
+export const DEFAULT_REPORT_EXCLUDE_MERGE = true

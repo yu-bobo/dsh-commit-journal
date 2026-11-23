@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0
+
+- Reports: default exclude merge commits; optional type/author blacklists via settings
+- Reports: `groupBy` = `repo` (default) | `day` | `flat`; header shows raw → included counts
+- Reports: week/month attendance section vs statutory workdays (local cache; wording avoids “didn’t work”)
+- Agent tools: `get_period_report` gains `groupBy` / `excludeMerge` / `includeAttendance`; settings update for report filters
+
 ## 0.3.0
 
 - Providers: GitLab (incl. self-hosted) and GitHub / GitHub Enterprise adapters (GitLab pending live verification; GitHub tested)

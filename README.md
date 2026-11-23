@@ -119,9 +119,9 @@ feat(smart-patrol): H5 今日任务对接分页并触底无限加载
 | `sync_commits` | 增量同步（remote API 或 local `git log`） |
 | `list_repos` | 仓库列表；`refresh` 时 remote 拉 API / local 重扫 |
 | `query_commits` | 按日期 / 仓库 / 关键词查本地提交 |
-| `get_period_report` | 日 / 周 / 月 / 自定义区间 Markdown 材料（可落盘） |
+| `get_period_report` | 日 / 周 / 月 / 自定义区间 Markdown（默认排除 merge、按仓库分组；周/月含法定工作日出勤对照；可落盘） |
 | `get_activity_heatmap` | 热力统计；传 `date` 可取单日明细 |
-| `update_journal_settings` | 同步间隔、回溯天数、导出目录等 |
+| `update_journal_settings` | 同步间隔、回溯天数、导出目录、报告过滤（`reportExcludeMerge` / Types / Authors）等 |
 
 ## 可直接对 Agent 说的提示词
 
@@ -143,6 +143,14 @@ feat(smart-patrol): H5 今日任务对接分页并触底无限加载
 
 建议流程：`list_accounts` →（缺数据则）`sync_commits` → `query_commits` / `get_period_report` / `get_activity_heatmap`。
 
+### 报告选项（通用底座）
+
+- **过滤**：默认排除 merge；可用设置 `reportExcludeTypes` / `reportExcludeAuthors`（默认空），或单次传 `excludeMerge`
+- **分组**：`groupBy=repo`（默认）| `day` | `flat`
+- **出勤对照**：仅周/月；按法定工作日对照本地缓存是否有提交（文案为「本地缓存无提交」）；`includeAttendance=false` 可关
+
+规范提交的 ticket 归组等增强为后续可选能力，不作为默认路径。
+
 ## 数据目录
 
 ```text
@@ -161,6 +169,8 @@ feat(smart-patrol): H5 今日任务对接分页并触底无限加载
 - [x] 本机 git 根目录扫描（按账号）
 - [x] GitLab（含自建）— 已接入，**待实测**
 - [x] GitHub / GitHub Enterprise — 已接入并实测（含公司代理 TLS）
+- [x] 报告通用底座（merge 过滤、按仓库/按日、法定工作日出勤对照）
+- [ ] 报告可选增强（conventional / ticket 归组）
 
 ## License
 

@@ -115,13 +115,18 @@ function isWorkday(d: Dayjs, yearDays: YearDays): boolean {
   return dow >= 1 && dow <= 5
 }
 
-async function countWorkdays(from: Dayjs, to: Dayjs): Promise<number> {
+async function loadYears(from: Dayjs, to: Dayjs): Promise<Map<number, YearDays>> {
   const years = new Set<number>()
   for (let cur = from; !cur.isAfter(to, 'day'); cur = cur.add(1, 'day')) {
     years.add(cur.year())
   }
   const byYear = new Map<number, YearDays>()
   for (const y of years) byYear.set(y, await fetchYear(y))
+  return byYear
+}
+
+async function countWorkdays(from: Dayjs, to: Dayjs): Promise<number> {
+  const byYear = await loadYears(from, to)
   let count = 0
   for (let cur = from; !cur.isAfter(to, 'day'); cur = cur.add(1, 'day')) {
     if (isWorkday(cur, byYear.get(cur.year())!)) count++
@@ -129,14 +134,78 @@ async function countWorkdays(from: Dayjs, to: Dayjs): Promise<number> {
   return count
 }
 
+export interface WorkdayAttendanceRow {
+  date: string
+  // 0=日 … 6=六
+  weekday: number
+  commitCount: number
+  // 本地缓存无提交
+  empty: boolean
+}
+
+/**
+ * 列出闭区间内的法定工作日（含调休上班日，不含节假日）
+ */
+export async function listStatutoryWorkdays(from: Dayjs, to: Dayjs): Promise<string[]> {
+  const byYear = await loadYears(from, to)
+  const days: string[] = []
+  for (let cur = from; !cur.isAfter(to, 'day'); cur = cur.add(1, 'day')) {
+    if (isWorkday(cur, byYear.get(cur.year())!)) days.push(cur.format('YYYY-MM-DD'))
+  }
+  return days
+}
+
+/**
+ * 法定工作日 × 本地缓存提交数（按自然日）
+ */
+export async function buildWorkdayAttendance(
+  from: Dayjs,
+  to: Dayjs,
+  commitCountByDay: Map<string, number>
+): Promise<WorkdayAttendanceRow[]> {
+  const workdays = await listStatutoryWorkdays(from, to)
+  return workdays.map((date) => {
+    const commitCount = commitCountByDay.get(date) || 0
+    return {
+      date,
+      weekday: dayjs(date).day(),
+      commitCount,
+      empty: commitCount === 0
+    }
+  })
+}
+
+function rangeBoundsForKind(
+  kind: ReportKind,
+  date?: string
+): { from: Dayjs; to: Dayjs } | null {
+  if (kind !== 'week' && kind !== 'month') return null
+  const d = dayjs(date || dayjs().format('YYYY-MM-DD'))
+  if (kind === 'week') {
+    return { from: d.startOf('isoWeek'), to: d.endOf('isoWeek') }
+  }
+  return { from: d.startOf('month'), to: d.endOf('month') }
+}
+
 export async function resolveStatutoryWorkdays(
   kind: ReportKind,
   date?: string
 ): Promise<number | undefined> {
-  if (kind !== 'week' && kind !== 'month') return undefined
-  const d = dayjs(date || dayjs().format('YYYY-MM-DD'))
-  if (kind === 'week') {
-    return countWorkdays(d.startOf('isoWeek'), d.endOf('isoWeek'))
-  }
-  return countWorkdays(d.startOf('month'), d.endOf('month'))
+  const bounds = rangeBoundsForKind(kind, date)
+  if (!bounds) return undefined
+  return countWorkdays(bounds.from, bounds.to)
+}
+
+/**
+ * 周/月报出勤对照数据；其它 kind 返回 undefined
+ */
+export async function resolveWorkdayAttendance(
+  kind: ReportKind,
+  date: string | undefined,
+  commitCountByDay: Map<string, number>
+): Promise<{ statutoryWorkdays: number; rows: WorkdayAttendanceRow[] } | undefined> {
+  const bounds = rangeBoundsForKind(kind, date)
+  if (!bounds) return undefined
+  const rows = await buildWorkdayAttendance(bounds.from, bounds.to, commitCountByDay)
+  return { statutoryWorkdays: rows.length, rows }
 }

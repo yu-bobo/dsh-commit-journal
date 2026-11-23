@@ -18,7 +18,7 @@ import {
   buildCommitSubjectListMarkdown
 } from '../core/reportMarkdown.js'
 import { accountSummary, getAccount, resolveAccountId } from './resolveAccount.js'
-import type { ReportKind } from '../core/types.js'
+import type { ReportGroupBy, ReportKind } from '../core/types.js'
 import dayjs from 'dayjs'
 
 function textOut(text: string) {
@@ -317,7 +317,8 @@ export function registerTools(ctx: Context): void {
   ctx.tools.register(
     defineTool({
       name: 'get_period_report',
-      description: '按日/周/月/自定义区间生成报告 Markdown 材料（含法定工作日天数）。',
+      description:
+        '按日/周/月/自定义区间生成报告 Markdown 材料。默认按仓库分组、排除 merge；周/月含法定工作日出勤对照（本地缓存）。可用 groupBy=day|flat 调整结构。',
       parameters: {
         accountId: { type: 'string' },
         kind: {
@@ -328,6 +329,18 @@ export function registerTools(ctx: Context): void {
         date: { type: 'string', description: '锚点日期 YYYY-MM-DD' },
         from: { type: 'string', description: 'custom 起始' },
         to: { type: 'string', description: 'custom 结束' },
+        groupBy: {
+          type: 'string',
+          description: 'repo（默认）| day | flat'
+        },
+        excludeMerge: {
+          type: 'boolean',
+          description: '是否排除 merge；省略则用设置（默认 true）'
+        },
+        includeAttendance: {
+          type: 'boolean',
+          description: '周/月是否附出勤对照，默认 true'
+        },
         exportFile: { type: 'boolean', description: '是否落盘，默认 true' }
       },
       output: {
@@ -336,21 +349,37 @@ export function registerTools(ctx: Context): void {
       },
       async execute(args: Record<string, any>) {
         const id = resolveAccountId(args.accountId)
+        const groupBy = args.groupBy as ReportGroupBy | undefined
         const result = await generateReport(
           {
             accountId: id,
             kind: args.kind as ReportKind,
             date: args.date,
             from: args.from,
-            to: args.to
+            to: args.to,
+            groupBy,
+            excludeMerge: args.excludeMerge,
+            includeAttendance: args.includeAttendance
           },
           args.exportFile !== false
         )
+        const excl = result.excluded
+        const exclParts = excl
+          ? [
+              excl.merge ? `merge ${excl.merge}` : '',
+              excl.type ? `type ${excl.type}` : '',
+              excl.author ? `author ${excl.author}` : ''
+            ].filter(Boolean)
+          : []
         return textOut(
           [
             result.markdown,
             '',
             result.filePath ? `已落盘：${result.filePath}` : '',
+            result.rawCommitCount != null && result.rawCommitCount !== result.commitCount
+              ? `提交：原始 ${result.rawCommitCount} → 纳入 ${result.commitCount}` +
+                (exclParts.length ? `（排除 ${exclParts.join(' / ')}）` : '')
+              : '',
             result.statutoryWorkdays != null
               ? `法定工作日：${result.statutoryWorkdays} 天`
               : ''
@@ -408,12 +437,27 @@ export function registerTools(ctx: Context): void {
   ctx.tools.register(
     defineTool({
       name: 'update_journal_settings',
-      description: '更新本地同步/导出/热力图 UI 端口等设置。',
+      description:
+        '更新本地同步/导出/热力图 UI 端口与报告过滤设置（reportExcludeMerge / Types / Authors）。',
       parameters: {
         exportsPath: { type: 'string' },
         syncIntervalMinutes: { type: 'number' },
         syncLookbackDays: { type: 'number' },
-        uiPort: { type: 'number' }
+        uiPort: { type: 'number' },
+        reportExcludeMerge: {
+          type: 'boolean',
+          description: '报告默认排除 merge，默认 true'
+        },
+        reportExcludeTypes: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'conventional type 黑名单，如 chore、ci；默认空'
+        },
+        reportExcludeAuthors: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '作者名/邮箱子串黑名单；默认空'
+        }
       },
       output: {
         schema: { type: 'string' },
