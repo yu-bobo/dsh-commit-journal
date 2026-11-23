@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0
+
+- Reports (optional): `groupBy=ticket` merges commits by ticket id (`[ABC-123]` / `#123` / `ABC-123`); no-ticket commits stay repo-grouped
+- Reports: conventional message parse (`type`/`scope`/`ticket`/bullets); failure degrades safely
+- Settings: `reportGroupBy` default remains `repo`
+
 ## 0.4.0
 
 - Reports: default exclude merge commits; optional type/author blacklists via settings

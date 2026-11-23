@@ -1,5 +1,8 @@
 import type { StoredCommit } from './types.js'
 import { commitTitleLine } from './commitText.js'
+import { extractCommitType } from './commitParse.js'
+
+export { extractCommitType } from './commitParse.js'
 
 export interface ReportFilterOptions {
   // 默认 true
@@ -31,15 +34,6 @@ const MERGE_TITLE =
  */
 export function isMergeCommit(commit: StoredCommit): boolean {
   return MERGE_TITLE.test(commitTitleLine(commit))
-}
-
-/**
- * 轻量抽出 conventional type（仅供过滤；认不出返回 null）
- */
-export function extractCommitType(commit: StoredCommit): string | null {
-  const title = commitTitleLine(commit)
-  const m = title.match(/^([a-zA-Z]+)(?:\([^)]*\))?(?:!)?:\s/)
-  return m ? m[1].toLowerCase() : null
 }
 
 /**

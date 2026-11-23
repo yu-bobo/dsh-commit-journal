@@ -2,9 +2,11 @@ import { existsSync, readFileSync, writeFileSync } from 'fs'
 import {
   AppSettings,
   DEFAULT_REPORT_EXCLUDE_MERGE,
+  DEFAULT_REPORT_GROUP_BY,
   DEFAULT_SYNC_INTERVAL_MINUTES,
   DEFAULT_SYNC_LOOKBACK_DAYS,
-  DEFAULT_UI_PORT
+  DEFAULT_UI_PORT,
+  type ReportGroupBy
 } from './types.js'
 import { defaultExportsDir, settingsPath } from './paths.js'
 
@@ -15,7 +17,8 @@ const defaults: AppSettings = {
   uiPort: DEFAULT_UI_PORT,
   reportExcludeMerge: DEFAULT_REPORT_EXCLUDE_MERGE,
   reportExcludeTypes: [],
-  reportExcludeAuthors: []
+  reportExcludeAuthors: [],
+  reportGroupBy: DEFAULT_REPORT_GROUP_BY
 }
 
 function load(): AppSettings {
@@ -55,8 +58,16 @@ export function updateSettings(patch: Partial<AppSettings>): AppSettings {
   if (patch.reportExcludeAuthors !== undefined) {
     next.reportExcludeAuthors = normalizeStringList(patch.reportExcludeAuthors)
   }
+  if (patch.reportGroupBy !== undefined) {
+    next.reportGroupBy = normalizeGroupBy(patch.reportGroupBy)
+  }
   save(next)
   return next
+}
+
+function normalizeGroupBy(value: unknown): ReportGroupBy {
+  if (value === 'day' || value === 'flat' || value === 'repo' || value === 'ticket') return value
+  return DEFAULT_REPORT_GROUP_BY
 }
 
 export function getExportsPathSetting(): string {
@@ -88,6 +99,10 @@ export function getReportExcludeAuthors(): string[] {
   return normalizeStringList(load().reportExcludeAuthors)
 }
 
+export function getReportGroupBy(): ReportGroupBy {
+  return normalizeGroupBy(load().reportGroupBy)
+}
+
 export function describeSettings(): Record<string, unknown> {
   const s = load()
   return {
@@ -95,6 +110,7 @@ export function describeSettings(): Record<string, unknown> {
     reportExcludeMerge: getReportExcludeMerge(),
     reportExcludeTypes: getReportExcludeTypes(),
     reportExcludeAuthors: getReportExcludeAuthors(),
+    reportGroupBy: getReportGroupBy(),
     resolvedExportsPath: s.exportsPath?.trim() || defaultExportsDir(),
     defaultExportsPath: defaultExportsDir()
   }

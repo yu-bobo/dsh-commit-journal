@@ -318,7 +318,7 @@ export function registerTools(ctx: Context): void {
     defineTool({
       name: 'get_period_report',
       description:
-        '按日/周/月/自定义区间生成报告 Markdown 材料。默认按仓库分组、排除 merge；周/月含法定工作日出勤对照（本地缓存）。可用 groupBy=day|flat 调整结构。',
+        '按日/周/月/自定义区间生成报告 Markdown 材料。默认按仓库分组、排除 merge；周/月含法定工作日出勤对照。groupBy=ticket 时按工单归组（无工单仍按仓库）。',
       parameters: {
         accountId: { type: 'string' },
         kind: {
@@ -331,7 +331,7 @@ export function registerTools(ctx: Context): void {
         to: { type: 'string', description: 'custom 结束' },
         groupBy: {
           type: 'string',
-          description: 'repo（默认）| day | flat'
+          description: 'repo（默认）| day | flat | ticket（可选增强）'
         },
         excludeMerge: {
           type: 'boolean',
@@ -438,7 +438,7 @@ export function registerTools(ctx: Context): void {
     defineTool({
       name: 'update_journal_settings',
       description:
-        '更新本地同步/导出/热力图 UI 端口与报告过滤设置（reportExcludeMerge / Types / Authors）。',
+        '更新本地同步/导出/热力图 UI 端口与报告设置（过滤、默认 groupBy）。',
       parameters: {
         exportsPath: { type: 'string' },
         syncIntervalMinutes: { type: 'number' },
@@ -457,6 +457,10 @@ export function registerTools(ctx: Context): void {
           type: 'array',
           items: { type: 'string' },
           description: '作者名/邮箱子串黑名单；默认空'
+        },
+        reportGroupBy: {
+          type: 'string',
+          description: '默认分组：repo | day | flat | ticket'
         }
       },
       output: {

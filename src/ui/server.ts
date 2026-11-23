@@ -426,7 +426,8 @@ async function handler(req: IncomingMessage, res: ServerResponse): Promise<void>
         uiPort: body.uiPort,
         reportExcludeMerge: body.reportExcludeMerge,
         reportExcludeTypes: body.reportExcludeTypes,
-        reportExcludeAuthors: body.reportExcludeAuthors
+        reportExcludeAuthors: body.reportExcludeAuthors,
+        reportGroupBy: body.reportGroupBy
       })
       sendJson(res, 200, { ok: true, settings: describeSettings(), saved: next })
       return

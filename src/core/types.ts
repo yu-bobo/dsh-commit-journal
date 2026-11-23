@@ -106,8 +106,8 @@ export interface SyncResult {
 
 export type ReportKind = 'day' | 'week' | 'month' | 'custom'
 
-// repo = 按仓库（默认）；day = 按日再按仓库；flat = 接近旧版流水
-export type ReportGroupBy = 'repo' | 'day' | 'flat'
+// repo = 按仓库（默认）；day = 按日再按仓库；flat = 流水；ticket = 按工单（可选增强）
+export type ReportGroupBy = 'repo' | 'day' | 'flat' | 'ticket'
 
 export interface ReportRequest {
   accountId: string
@@ -170,9 +170,12 @@ export interface AppSettings {
   reportExcludeTypes?: string[]
   // 作者名/邮箱子串黑名单；默认空
   reportExcludeAuthors?: string[]
+  // 报告默认分组；缺省 repo。ticket 为可选增强
+  reportGroupBy?: ReportGroupBy
 }
 
 export const DEFAULT_SYNC_INTERVAL_MINUTES = 30
 export const DEFAULT_SYNC_LOOKBACK_DAYS = 90
 export const DEFAULT_UI_PORT = 39282
 export const DEFAULT_REPORT_EXCLUDE_MERGE = true
+export const DEFAULT_REPORT_GROUP_BY: ReportGroupBy = 'repo'

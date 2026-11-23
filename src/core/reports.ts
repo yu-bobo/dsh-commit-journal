@@ -16,7 +16,8 @@ import {
 import {
   getReportExcludeAuthors,
   getReportExcludeMerge,
-  getReportExcludeTypes
+  getReportExcludeTypes,
+  getReportGroupBy
 } from './settings.js'
 
 function countByLocalDay(commits: StoredCommit[]): Map<string, number> {
@@ -29,8 +30,17 @@ function countByLocalDay(commits: StoredCommit[]): Map<string, number> {
 }
 
 function resolveGroupBy(groupBy?: ReportGroupBy): ReportGroupBy {
-  if (groupBy === 'day' || groupBy === 'flat' || groupBy === 'repo') return groupBy
-  return 'repo'
+  if (groupBy === 'day' || groupBy === 'flat' || groupBy === 'repo' || groupBy === 'ticket') {
+    return groupBy
+  }
+  return getReportGroupBy()
+}
+
+function sectionTitleFor(groupBy: ReportGroupBy): string {
+  if (groupBy === 'day') return '## 按日'
+  if (groupBy === 'flat') return '## 提交列表'
+  if (groupBy === 'ticket') return '## 工作单元'
+  return '## 按仓库'
 }
 
 function buildTemplateMarkdown(opts: {
@@ -56,9 +66,7 @@ function buildTemplateMarkdown(opts: {
   lines.push('')
   lines.push('> 以下为过滤后的提交材料，可据此改写成汇报用语。')
   lines.push('')
-  const sectionTitle =
-    opts.groupBy === 'day' ? '## 按日' : opts.groupBy === 'flat' ? '## 提交列表' : '## 按仓库'
-  lines.push(sectionTitle)
+  lines.push(sectionTitleFor(opts.groupBy))
   lines.push('')
   lines.push(buildGroupedCommitMarkdown(opts.kept, opts.groupBy))
   lines.push('')

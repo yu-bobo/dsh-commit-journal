@@ -1,6 +1,7 @@
 import dayjs from 'dayjs'
 import type { ReportExclusionStats, ReportGroupBy, StoredCommit } from './types.js'
 import type { WorkdayAttendanceRow } from './cnWorkdays.js'
+import { parseConventional, type ParsedCommit } from './commitParse.js'
 import { commitFullText, commitTitleLine } from './commitText.js'
 import { formatExclusionSummary } from './reportFilter.js'
 
@@ -121,6 +122,86 @@ export function buildDayThenRepoMarkdown(commits: StoredCommit[]): string {
   return lines.join('\n').trimEnd()
 }
 
+interface TicketUnit {
+  ticket: string
+  commits: StoredCommit[]
+  parsed: ParsedCommit[]
+}
+
+/**
+ * 有 ticket 的并成工作单元；无 ticket 退回按仓库列表
+ */
+export function buildTicketGroupedMarkdown(commits: StoredCommit[]): string {
+  const byTicket = new Map<string, TicketUnit>()
+  const noTicket: StoredCommit[] = []
+
+  for (const c of commits) {
+    const parsed = parseConventional(c)
+    if (!parsed.ticket) {
+      noTicket.push(c)
+      continue
+    }
+    const key = parsed.ticket
+    let unit = byTicket.get(key)
+    if (!unit) {
+      unit = { ticket: key, commits: [], parsed: [] }
+      byTicket.set(key, unit)
+    }
+    unit.commits.push(c)
+    unit.parsed.push(parsed)
+  }
+
+  const lines: string[] = []
+  const units = Array.from(byTicket.values()).sort((a, b) => a.ticket.localeCompare(b.ticket))
+
+  if (units.length) {
+    lines.push('### 按工单', '')
+    for (const unit of units) {
+      const types = Array.from(
+        new Set(unit.parsed.map((p) => p.type).filter(Boolean) as string[])
+      )
+      const repos = Array.from(new Set(unit.commits.map((c) => c.repoName))).sort()
+      const times = unit.commits.map((c) => c.committedAt).sort()
+      const from = dayjs(times[0]).format('MM-DD')
+      const to = dayjs(times[times.length - 1]).format('MM-DD')
+      const range = from === to ? from : `${from} ~ ${to}`
+      const titleSummary =
+        unit.parsed.find((p) => p.summary)?.summary || commitTitleLine(unit.commits[0])
+
+      lines.push(`#### [${unit.ticket}] ${titleSummary}`)
+      lines.push('')
+      if (types.length) lines.push(`- 类型：${types.join(' / ')}`)
+      lines.push(`- 仓库：${repos.join('、')}`)
+      lines.push(`- 提交：${unit.commits.length} 条（${range}）`)
+      lines.push('- 要点：')
+      const seen = new Set<string>()
+      for (const p of unit.parsed) {
+        const tip = p.summary || ''
+        if (tip && !seen.has(tip)) {
+          seen.add(tip)
+          lines.push(`  - ${tip}`)
+        }
+        for (const b of p.bullets) {
+          if (!seen.has(b)) {
+            seen.add(b)
+            lines.push(`  - ${b}`)
+          }
+        }
+      }
+      lines.push('')
+    }
+  }
+
+  if (noTicket.length) {
+    lines.push('### 无工单（按仓库）', '')
+    lines.push(buildCommitDetailsMarkdown(noTicket))
+    lines.push('')
+  }
+
+  if (!units.length && !noTicket.length) return '（无提交）'
+  return lines.join('\n').trimEnd()
+}
+
 /**
  * 按 groupBy 生成主体 Markdown
  */
@@ -131,6 +212,7 @@ export function buildGroupedCommitMarkdown(
   if (!commits.length) return '（无提交）'
   if (groupBy === 'flat') return buildFlatCommitDetailsMarkdown(commits)
   if (groupBy === 'day') return buildDayThenRepoMarkdown(commits)
+  if (groupBy === 'ticket') return buildTicketGroupedMarkdown(commits)
   return buildCommitDetailsMarkdown(commits)
 }
 
