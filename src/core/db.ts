@@ -151,6 +151,22 @@ export const db = {
     save(data)
   },
 
+  getCommit(accountId: string, sha: string): StoredCommit | undefined {
+    return load().commits.find((c) => c.accountId === accountId && c.sha === sha)
+  },
+
+  // 缺增删行汇总的提交（按 committedAt 新→旧），用于同步后补拉
+  listCommitsMissingStats(accountId: string, limit = 80): StoredCommit[] {
+    return load()
+      .commits.filter(
+        (c) =>
+          c.accountId === accountId && c.additions == null && c.deletions == null
+      )
+      .sort((a, b) => b.committedAt.localeCompare(a.committedAt))
+      .slice(0, Math.max(0, limit))
+      .map((c) => ({ ...c }))
+  },
+
   insertCommits(commits: StoredCommit[]): number {
     if (commits.length === 0) return 0
     const data = load()
@@ -169,16 +185,27 @@ export const db = {
       const prev = data.commits[idx]
       const nextMsg = (c.message || '').trim()
       const prevMsg = (prev.message || '').trim()
-      if (nextMsg && nextMsg.length > prevMsg.length) {
-        data.commits[idx] = {
-          ...prev,
-          title: c.title || prev.title,
-          message: nextMsg,
-          webUrl: c.webUrl || prev.webUrl,
-          syncedAt: c.syncedAt || prev.syncedAt
-        }
-        updated++
+      const msgUpgrade = Boolean(nextMsg && nextMsg.length > prevMsg.length)
+      const statsUpgrade =
+        prev.additions == null &&
+        prev.deletions == null &&
+        (c.additions != null || c.deletions != null || c.filesChanged != null)
+      if (!msgUpgrade && !statsUpgrade) continue
+      data.commits[idx] = {
+        ...prev,
+        title: msgUpgrade ? c.title || prev.title : prev.title,
+        message: msgUpgrade ? nextMsg : prev.message,
+        webUrl: c.webUrl || prev.webUrl,
+        syncedAt: c.syncedAt || prev.syncedAt,
+        ...(statsUpgrade
+          ? {
+              additions: c.additions,
+              deletions: c.deletions,
+              filesChanged: c.filesChanged
+            }
+          : {})
       }
+      updated++
     }
     if (inserted > 0 || updated > 0) save(data)
     return inserted
@@ -227,7 +254,10 @@ export const db = {
     const { from, to } = resolveActivityRange(year)
     const today = dayjs().startOf('day')
     const yearSet = new Set<number>([today.year()])
-    const byDay = new Map<string, number>()
+    const byDay = new Map<
+      string,
+      { count: number; additions: number; deletions: number; filesChanged: number; withStats: number; withFiles: number }
+    >()
 
     for (const c of data.commits) {
       if (c.accountId !== accountId) continue
@@ -236,19 +266,61 @@ export const db = {
       yearSet.add(at.year())
       if (at.isBefore(from, 'day') || at.isAfter(to, 'day')) continue
       const key = at.format('YYYY-MM-DD')
-      byDay.set(key, (byDay.get(key) ?? 0) + 1)
+      let bucket = byDay.get(key)
+      if (!bucket) {
+        bucket = {
+          count: 0,
+          additions: 0,
+          deletions: 0,
+          filesChanged: 0,
+          withStats: 0,
+          withFiles: 0
+        }
+        byDay.set(key, bucket)
+      }
+      bucket.count++
+      if (c.additions != null || c.deletions != null) {
+        bucket.withStats++
+        bucket.additions += c.additions ?? 0
+        bucket.deletions += c.deletions ?? 0
+      }
+      if (c.filesChanged != null) {
+        bucket.withFiles++
+        bucket.filesChanged += c.filesChanged
+      }
     }
 
     const days: ActivityDay[] = Array.from(byDay.entries())
-      .map(([date, count]) => ({ date, count }))
+      .map(([date, b]) => {
+        const day: ActivityDay = { date, count: b.count }
+        if (b.withStats > 0) {
+          day.additions = b.additions
+          day.deletions = b.deletions
+        }
+        if (b.withFiles > 0) day.filesChanged = b.filesChanged
+        return day
+      })
       .sort((a, b) => a.date.localeCompare(b.date))
 
     let longestStreak = 0
     let streak = 0
     let maxDayCount = 0
     let maxDayDate: string | null = null
+    let totalAdditions = 0
+    let totalDeletions = 0
+    let totalFilesChanged = 0
+    let commitsWithStats = 0
+    for (const d of days) {
+      if (d.additions != null || d.deletions != null) {
+        totalAdditions += d.additions ?? 0
+        totalDeletions += d.deletions ?? 0
+      }
+      if (d.filesChanged != null) totalFilesChanged += d.filesChanged
+    }
+    for (const b of byDay.values()) commitsWithStats += b.withStats
+
     for (let cur = from, guard = 0; !cur.isAfter(to, 'day') && guard < 1000; guard++) {
-      const count = byDay.get(cur.format('YYYY-MM-DD')) ?? 0
+      const count = byDay.get(cur.format('YYYY-MM-DD'))?.count ?? 0
       if (count > 0) {
         streak++
         if (streak > longestStreak) longestStreak = streak
@@ -276,7 +348,11 @@ export const db = {
         activeDays: days.length,
         longestStreak,
         maxDayCount,
-        maxDayDate
+        maxDayDate,
+        totalAdditions,
+        totalDeletions,
+        totalFilesChanged,
+        commitsWithStats
       }
     }
   },

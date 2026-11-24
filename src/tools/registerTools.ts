@@ -420,7 +420,10 @@ export function registerTools(ctx: Context): void {
                   repo: c.repoName,
                   title: c.title,
                   sha: c.shortId,
-                  webUrl: c.webUrl
+                  webUrl: c.webUrl,
+                  additions: c.additions,
+                  deletions: c.deletions,
+                  filesChanged: c.filesChanged
                 }))
               },
               null,

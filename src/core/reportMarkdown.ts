@@ -3,6 +3,11 @@ import type { ReportExclusionStats, ReportGroupBy, StoredCommit } from './types.
 import type { WorkdayAttendanceRow } from './cnWorkdays.js'
 import { parseConventional, type ParsedCommit } from './commitParse.js'
 import { commitFullText, commitTitleLine } from './commitText.js'
+import {
+  formatCommitDiffStats,
+  formatDiffStatsSum,
+  sumCommitDiffStats
+} from './commitStats.js'
 import { formatExclusionSummary } from './reportFilter.js'
 
 const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六']
@@ -15,6 +20,7 @@ export function buildReportHeader(
     rawCommitCount?: number
     excluded?: ReportExclusionStats
     statutoryWorkdays?: number
+    commits?: StoredCommit[]
   }
 ): string {
   const lines: string[] = [`# ${title}`, '', `- 账号：${accountName}`]
@@ -29,6 +35,10 @@ export function buildReportHeader(
   } else {
     lines.push(`- 提交数：${opts.commitCount}`)
   }
+  if (opts.commits?.length) {
+    const sumLine = formatDiffStatsSum(sumCommitDiffStats(opts.commits))
+    if (sumLine) lines.push(`- 变更：${sumLine}`)
+  }
   if (opts.statutoryWorkdays != null) {
     lines.push(`- 法定工作日：${opts.statutoryWorkdays} 天`)
   }
@@ -36,11 +46,16 @@ export function buildReportHeader(
   return lines.join('\n')
 }
 
+function appendStatsSuffix(text: string, c: StoredCommit): string {
+  const stats = formatCommitDiffStats(c)
+  return stats ? `${text}（${stats}）` : text
+}
+
 function pushCommitDetail(lines: string[], c: StoredCommit, timeFmt = 'MM-DD HH:mm'): void {
   const time = dayjs(c.committedAt).format(timeFmt)
   const text = commitFullText(c)
   const [first, ...rest] = text.split('\n')
-  lines.push(`- [${time}] ${first}`)
+  lines.push(`- [${time}] ${appendStatsSuffix(first, c)}`)
   for (const line of rest) lines.push(`  ${line}`)
 }
 
@@ -75,7 +90,7 @@ export function buildCommitSubjectListMarkdown(commits: StoredCommit[]): string 
     lines.push(`### ${repo}`, '')
     for (const c of list) {
       const time = dayjs(c.committedAt).format('MM-DD HH:mm')
-      lines.push(`- [${time}] ${commitTitleLine(c)}`)
+      lines.push(`- [${time}] ${appendStatsSuffix(commitTitleLine(c), c)}`)
     }
     lines.push('')
   }
@@ -92,7 +107,7 @@ export function buildFlatCommitDetailsMarkdown(commits: StoredCommit[]): string 
     const time = dayjs(c.committedAt).format('MM-DD HH:mm')
     const text = commitFullText(c)
     const [first, ...rest] = text.split('\n')
-    lines.push(`- [${time}] **[${c.repoName}]** ${first}`)
+    lines.push(`- [${time}] **[${c.repoName}]** ${appendStatsSuffix(first, c)}`)
     for (const line of rest) lines.push(`  ${line}`)
   }
   return lines.join('\n').trimEnd()
@@ -173,6 +188,8 @@ export function buildTicketGroupedMarkdown(commits: StoredCommit[]): string {
       if (types.length) lines.push(`- 类型：${types.join(' / ')}`)
       lines.push(`- 仓库：${repos.join('、')}`)
       lines.push(`- 提交：${unit.commits.length} 条（${range}）`)
+      const unitStats = formatDiffStatsSum(sumCommitDiffStats(unit.commits))
+      if (unitStats) lines.push(`- 变更：${unitStats}`)
       lines.push('- 要点：')
       const seen = new Set<string>()
       for (const p of unit.parsed) {

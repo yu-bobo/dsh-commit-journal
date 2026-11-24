@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0
+
+- Sync: store per-commit diff stats (`additions` / `deletions` / optional `filesChanged`); no file path list; no bulk backfill of old rows
+- Providers: local via `git log --numstat`; GitLab `with_stats`; Codeup/GitHub per-SHA GetCommit (concurrency 4, 429 backoff) when list omits stats; each sync backfills up to 100 older rows missing stats
+- Codeup: no `/diff` fallback (GetCommit stats only); GitHub omits `filesChanged` when files list is truncated at 300
+- Reports / daily exports / panel: show `+a −d` (and files when known); report header sums stats over included commits
+- Activity: range totals `+/−` in stats cards; per-day tooltip includes line stats when present
+
 ## 0.5.0
 
 - Reports (optional): `groupBy=ticket` merges commits by ticket id (`[ABC-123]` / `#123` / `ABC-123`); no-ticket commits stay repo-grouped

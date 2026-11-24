@@ -3,18 +3,42 @@ import { join } from 'path'
 import { v4 as uuid } from 'uuid'
 import type { Account, StoredCommit, SyncResult } from './types.js'
 import { commitFullText } from './commitText.js'
+import { formatCommitDiffStats } from './commitStats.js'
 import { shortRepoPath } from './repoDisplay.js'
 import { getAccount, getAccountToken, listAccounts } from './accounts.js'
 import { db } from './db.js'
 import { exportsDir } from './paths.js'
 import { getSyncIntervalMinutes, getSyncLookbackDays } from './settings.js'
 import { getProvider } from '../providers/index.js'
+import { enrichCodeupCommitStats } from '../providers/codeup/index.js'
+import { enrichGithubCommitStats } from '../providers/github/index.js'
 
 const timers = new Map<string, NodeJS.Timeout>()
 const syncing = new Set<string>()
 
 const DAY_MS = 24 * 3600 * 1000
 const INCREMENTAL_OVERLAP_MS = 2 * DAY_MS
+// 每次同步额外回填缺 stats 的历史提交（按时间新→旧）
+const STATS_BACKFILL_PER_SYNC = 100
+
+async function fillCommitStats(
+  account: Account,
+  token: string,
+  repoId: string,
+  commits: StoredCommit[],
+  onWarn: (message: string) => void
+): Promise<number> {
+  const need = commits.filter((c) => c.additions == null && c.deletions == null)
+  if (!need.length) return 0
+  if (account.provider === 'github') {
+    await enrichGithubCommitStats(account, token, repoId, need, onWarn)
+  } else if (account.provider === 'codeup') {
+    await enrichCodeupCommitStats(account, token, repoId, need, onWarn)
+  } else {
+    return 0
+  }
+  return need.filter((c) => c.additions != null || c.deletions != null).length
+}
 
 function toApiTime(iso: string): string {
   const t = Date.parse(iso)
@@ -49,11 +73,13 @@ function writeDailyExports(accountId: string, commits: StoredCommit[]): void {
       if (existing.includes(c.sha)) continue
       const text = commitFullText(c)
       const [first, ...rest] = text.split('\n')
-      lines.push(`- **[${c.repoName}]** ${first}`)
+      const stats = formatCommitDiffStats(c)
+      lines.push(`- **[${c.repoName}]** ${stats ? `${first}（${stats}）` : first}`)
       for (const line of rest) lines.push(`  ${line}`)
       lines.push(`  - 时间: ${c.committedAt}`)
       lines.push(`  - 作者: ${c.authorName} <${c.authorEmail}>`)
       lines.push(`  - SHA: \`${c.shortId}\` (${c.sha})`)
+      if (stats) lines.push(`  - 变更: ${stats}`)
       if (c.webUrl) lines.push(`  - 链接: ${c.webUrl}`)
       lines.push('')
     }
@@ -74,6 +100,7 @@ export async function syncAccount(
   let inserted = 0
   let matched = 0
   let truncated = 0
+  let statsFilled = 0
   try {
     const account = getAccount(accountId)
     if (!account) throw new Error('账号不存在')
@@ -157,10 +184,11 @@ export async function syncAccount(
         }
 
         const now = new Date().toISOString()
+        const batch: StoredCommit[] = []
         for (const c of commits) {
           if (!matchAuthor(account, c.authorName, c.authorEmail)) continue
           matched++
-          newCommits.push({
+          batch.push({
             id: uuid(),
             accountId,
             repoId: repo.id,
@@ -173,9 +201,31 @@ export async function syncAccount(
             authorEmail: c.authorEmail,
             committedAt: c.committedAt || c.authoredAt,
             webUrl: c.webUrl,
-            syncedAt: now
+            syncedAt: now,
+            ...(c.additions != null ? { additions: c.additions } : {}),
+            ...(c.deletions != null ? { deletions: c.deletions } : {}),
+            ...(c.filesChanged != null ? { filesChanged: c.filesChanged } : {})
           })
         }
+
+        // GitHub / Codeup 列表常无 stats：对本批缺汇总的提交限并发补拉
+        if (
+          (account.provider === 'github' || account.provider === 'codeup') &&
+          batch.length > 0
+        ) {
+          const onWarn = (message: string) => {
+            db.addSyncLog({
+              id: uuid(),
+              accountId,
+              at: new Date().toISOString(),
+              level: 'warn',
+              message: `${shortRepoPath(repo.fullName || repo.name, account.organizationId)}: ${message}`
+            })
+          }
+          statsFilled += await fillCommitStats(account, token, repo.id, batch, onWarn)
+        }
+
+        newCommits.push(...batch)
         db.setSyncState({
           accountId,
           repoId: repo.id,
@@ -198,6 +248,35 @@ export async function syncAccount(
     inserted = db.insertCommits(newCommits)
     writeDailyExports(accountId, newCommits)
 
+    // 增量同步碰不到的历史提交：按新→旧回填缺 stats 记录
+    if (account.provider === 'github' || account.provider === 'codeup') {
+      const pending = db.listCommitsMissingStats(accountId, STATS_BACKFILL_PER_SYNC)
+      if (pending.length > 0) {
+        const byRepo = new Map<string, StoredCommit[]>()
+        for (const c of pending) {
+          if (!byRepo.has(c.repoId)) byRepo.set(c.repoId, [])
+          byRepo.get(c.repoId)!.push(c)
+        }
+        const onWarn = (message: string) => {
+          db.addSyncLog({
+            id: uuid(),
+            accountId,
+            at: new Date().toISOString(),
+            level: 'warn',
+            message
+          })
+        }
+        for (const [repoId, list] of byRepo) {
+          try {
+            statsFilled += await fillCommitStats(account, token, repoId, list, onWarn)
+          } catch (e: any) {
+            onWarn(`回填 stats 失败（repo ${repoId}）: ${e?.message || e}`)
+          }
+        }
+        db.insertCommits(pending)
+      }
+    }
+
     db.addSyncLog({
       id: uuid(),
       accountId,
@@ -205,6 +284,7 @@ export async function syncAccount(
       level: errors.length || truncated ? 'warn' : 'info',
       message:
         `同步完成：拉取 ${fetched}（匹配作者 ${matched}），新增 ${inserted}` +
+        `${statsFilled ? `，补全变更统计 ${statsFilled}` : ''}` +
         `${truncated ? `，${truncated} 个仓库触及分页上限` : ''}` +
         `${errors.length ? `，失败 ${errors.length}` : ''}`
     })

@@ -381,7 +381,10 @@ async function handler(req: IncomingMessage, res: ServerResponse): Promise<void>
           message: c.message,
           authorName: c.authorName,
           sha: c.shortId,
-          webUrl: c.webUrl
+          webUrl: c.webUrl,
+          additions: c.additions,
+          deletions: c.deletions,
+          filesChanged: c.filesChanged
         }))
       })
       return

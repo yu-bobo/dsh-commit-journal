@@ -301,12 +301,14 @@ export const localGitProvider: VcsProvider = {
   async listCommitsSince(account, _token, repoId, opts: ListCommitsOptions): Promise<ListCommitsResult> {
     const cwd = resolveWorkTree(account, repoId)
     const ref = opts.ref || 'HEAD'
+    // format 以 \x1e 结束；其后为该提交的 --numstat 行，直到下一条 format
     const args = [
       'log',
       ref,
       '--no-merges',
       '--date=iso-strict',
-      '--format=%H%x1f%h%x1f%s%x1f%b%x1f%an%x1f%ae%x1f%aI%x1f%cI%x1e'
+      '--format=%H%x1f%h%x1f%s%x1f%b%x1f%an%x1f%ae%x1f%aI%x1f%cI%x1e',
+      '--numstat'
     ]
     if (opts.since) args.push(`--since=${opts.since}`)
     // soft cap similar to remote paging
@@ -325,24 +327,23 @@ export const localGitProvider: VcsProvider = {
     }
 
     const commits: RemoteCommit[] = []
-    const records = raw.split('\x1e').map((s) => s.trim()).filter(Boolean)
-    for (const rec of records) {
-      const parts = rec.split('\x1f')
-      if (parts.length < 8) continue
-      const [sha, shortId, title, messageBody, authorName, authorEmail, authoredAt, committedAt] =
-        parts
-      const message = [title, messageBody].filter(Boolean).join('\n').trim()
-      commits.push({
-        sha,
-        shortId: shortId || sha.slice(0, 7),
-        title: title || sha.slice(0, 7),
-        message: message || title || '',
-        authorName: authorName || '',
-        authorEmail: authorEmail || '',
-        authoredAt: authoredAt || committedAt || new Date().toISOString(),
-        committedAt: committedAt || authoredAt || new Date().toISOString(),
-        webUrl: ''
-      })
+    const parts = raw.split('\x1e')
+    for (let i = 0; i < parts.length; i++) {
+      const chunk = parts[i]
+      if (i === 0) {
+        const c = parseLocalCommitFields(chunk)
+        if (c) commits.push(c)
+        continue
+      }
+      const { stats, rest } = parseNumstatPrefix(chunk)
+      if (commits.length > 0) {
+        const prev = commits[commits.length - 1]
+        prev.additions = stats.additions
+        prev.deletions = stats.deletions
+        prev.filesChanged = stats.filesChanged
+      }
+      const c = parseLocalCommitFields(rest)
+      if (c) commits.push(c)
     }
     const capped = commits.length >= max
     return {
@@ -350,5 +351,54 @@ export const localGitProvider: VcsProvider = {
       capped,
       pages: Math.ceil(commits.length / 100) || (commits.length ? 1 : 0)
     }
+  }
+}
+
+// 解析 format 字段（%b 可能含换行，不能按行切）
+function parseLocalCommitFields(raw: string): RemoteCommit | null {
+  const text = raw.replace(/^\r?\n+/, '').replace(/\r?\n+$/, '')
+  if (!text.trim()) return null
+  const parts = text.split('\x1f')
+  if (parts.length < 8) return null
+  const [sha, shortId, title, messageBody, authorName, authorEmail, authoredAt, committedAt] =
+    parts
+  if (!sha?.trim()) return null
+  const message = [title, messageBody].filter(Boolean).join('\n').trim()
+  return {
+    sha: sha.trim(),
+    shortId: (shortId || sha.slice(0, 7)).trim(),
+    title: (title || sha.slice(0, 7)).trim(),
+    message: message || title || '',
+    authorName: authorName || '',
+    authorEmail: authorEmail || '',
+    authoredAt: authoredAt || committedAt || new Date().toISOString(),
+    committedAt: committedAt || authoredAt || new Date().toISOString(),
+    webUrl: ''
+  }
+}
+
+// 段首 numstat 行 → 汇总；其余为下一条 commit 的 format 正文
+function parseNumstatPrefix(raw: string): {
+  stats: { additions: number; deletions: number; filesChanged: number }
+  rest: string
+} {
+  const lines = raw.split(/\r?\n/)
+  let i = 0
+  while (i < lines.length && !lines[i].trim()) i++
+  let additions = 0
+  let deletions = 0
+  let filesChanged = 0
+  while (i < lines.length) {
+    const m = lines[i].match(/^(\d+|-)\t(\d+|-)\t(.*)$/)
+    if (!m) break
+    filesChanged++
+    if (m[1] !== '-') additions += Number(m[1])
+    if (m[2] !== '-') deletions += Number(m[2])
+    i++
+  }
+  while (i < lines.length && !lines[i].trim()) i++
+  return {
+    stats: { additions, deletions, filesChanged },
+    rest: lines.slice(i).join('\n')
   }
 }

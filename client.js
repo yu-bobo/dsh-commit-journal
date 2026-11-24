@@ -134,6 +134,7 @@ window.__ModuleLoader__.load({
         title: 'Message',
         author: 'Author',
         sha: 'SHA',
+        diff: 'Diff',
         level: 'Level',
         levelInfo: 'Info',
         levelWarn: 'Warn',
@@ -148,6 +149,9 @@ window.__ModuleLoader__.load({
         activeDays: 'Active days',
         longestStreak: 'Longest streak',
         maxDay: 'Peak day',
+        diffTotal: 'Diff',
+        noteDiff: '{n} commits with line stats',
+        noteDiffEmpty: 'Sync again to fill line stats',
         noData: 'No data yet. Sync commits first.',
         confirmDelete: 'Delete this account?',
         confirmClearCommits: 'Clear local commits for this account?',
@@ -294,6 +298,7 @@ window.__ModuleLoader__.load({
         title: '说明',
         author: '作者',
         sha: 'SHA',
+        diff: '变更',
         level: '级别',
         levelInfo: '信息',
         levelWarn: '警告',
@@ -308,6 +313,9 @@ window.__ModuleLoader__.load({
         activeDays: '活跃天数',
         longestStreak: '最长连续',
         maxDay: '单日最高',
+        diffTotal: '变更',
+        noteDiff: '{n} 条提交含行数统计',
+        noteDiffEmpty: '重新同步后可填充行数',
         noData: '暂无数据，请先同步提交。',
         confirmDelete: '确定删除该账号？',
         confirmClearCommits: '清除该账号本地提交记录？',
@@ -381,6 +389,8 @@ window.__ModuleLoader__.load({
         --dsh-cj-heat-2: #40c463;
         --dsh-cj-heat-3: #30a14e;
         --dsh-cj-heat-4: #216e39;
+        --dsh-cj-add: var(--dsw-alias-state-success-primary, #16a34a);
+        --dsh-cj-del: var(--dsw-alias-state-error-primary, #dc2626);
         position: relative;
         box-sizing: border-box;
         height: 100%;
@@ -907,13 +917,32 @@ window.__ModuleLoader__.load({
       .dsh-cj-modal h3 { margin: 0 0 12px; font-size: 15px; }
       .dsh-cj-stats {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 10px;
         margin: 4px 0 16px;
+      }
+      .dsh-cj-add {
+        color: var(--dsh-cj-add);
+        font-variant-numeric: tabular-nums;
+      }
+      .dsh-cj-del {
+        color: var(--dsh-cj-del);
+        font-variant-numeric: tabular-nums;
+      }
+      .dsh-cj-diff {
+        display: inline;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .dsh-cj-diff .dsh-cj-diff-sep {
+        color: var(--dsw-alias-label-secondary);
       }
       .dsh-cj-stat {
         position: relative;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-height: 92px;
         background: var(--dsw-alias-bg-layer-1);
         border: 1px solid var(--dsh-cj-border);
         border-radius: 12px;
@@ -932,9 +961,22 @@ window.__ModuleLoader__.load({
         margin-top: 4px;
         font-size: 26px;
         font-weight: 700;
-        line-height: 1.2;
+        line-height: 32px;
+        min-height: 32px;
         color: var(--dsh-cj-heat-3);
         font-variant-numeric: tabular-nums;
+      }
+      /* 须写在 .v 之后；与其它卡共用行高，底栏才能对齐 */
+      .dsh-cj-stat .v.v-diff {
+        font-size: 22px;
+        letter-spacing: -0.02em;
+        line-height: 32px;
+        min-height: 32px;
+        color: var(--dsw-alias-label-secondary);
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .dsh-cj-stat .v small {
         margin-left: 4px;
@@ -945,8 +987,10 @@ window.__ModuleLoader__.load({
       .dsh-cj-stat .n {
         position: relative;
         z-index: 1;
-        margin-top: 3px;
+        margin-top: auto;
+        padding-top: 0;
         font-size: 12px;
+        line-height: 16px;
         color: var(--dsw-alias-label-secondary);
         min-height: 16px;
       }
@@ -1274,6 +1318,51 @@ window.__ModuleLoader__.load({
       if (parts.length <= 1) return raw
       if (/^[a-f0-9]{24}$/i.test(parts[0])) return parts.slice(1).join('/') || raw
       return raw
+    }
+
+    // 大数压缩显示，避免窄卡溢出（活跃卡优先短格式，减少省略号）
+    function formatCompactNum(n) {
+      const num = Number(n) || 0
+      const abs = Math.abs(num)
+      if (abs >= 1e6) {
+        const v = num / 1e6
+        return (abs >= 1e7 ? v.toFixed(0) : v.toFixed(1).replace(/\.0$/, '')) + 'M'
+      }
+      if (abs >= 10000) return Math.round(num / 1000) + 'k'
+      if (abs >= 1000) {
+        return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k'
+      }
+      return String(num)
+    }
+
+    // 提交增删行汇总文案（tooltip 等）；无数据返回空
+    function formatDiffStats(c) {
+      if (!c || (c.additions == null && c.deletions == null)) return ''
+      const a = c.additions != null ? c.additions : 0
+      const d = c.deletions != null ? c.deletions : 0
+      let s = '+' + a + ' −' + d
+      if (c.filesChanged != null) s += ' · ' + c.filesChanged + ' files'
+      return s
+    }
+
+    // 增删分色节点；无数据返回 null。opts: files / compact
+    function renderDiffStats(c, opts) {
+      if (!c || (c.additions == null && c.deletions == null)) return null
+      const a = c.additions != null ? c.additions : 0
+      const d = c.deletions != null ? c.deletions : 0
+      const compact = Boolean(opts && opts.compact)
+      const showFiles = opts && opts.files !== false && c.filesChanged != null
+      const aText = '+' + (compact ? formatCompactNum(a) : a)
+      const dText = '−' + (compact ? formatCompactNum(d) : d)
+      const full = formatDiffStats(c)
+      return h('span', { className: 'dsh-cj-diff', title: full },
+        h('span', { className: 'dsh-cj-add' }, aText),
+        h('span', { className: 'dsh-cj-diff-sep' }, ' '),
+        h('span', { className: 'dsh-cj-del' }, dText),
+        showFiles
+          ? h('span', { className: 'dsh-cj-muted' }, ' · ' + c.filesChanged + ' files')
+          : null
+      )
     }
 
     function fillMsg(tpl, vars) {
@@ -2624,13 +2713,14 @@ window.__ModuleLoader__.load({
         h(TableScroll, {
           head: h('thead', null, h('tr', null,
             h('th', null, t('time')), h('th', null, t('repo')), h('th', null, t('title')),
-            h('th', null, t('author')), h('th', null, t('sha'))
+            h('th', null, t('diff')), h('th', null, t('author')), h('th', null, t('sha'))
           )),
           children: h('tbody', null, items.map((c) =>
             h('tr', { key: c.id },
               h('td', null, (c.committedAt || '').slice(0, 16).replace('T', ' ')),
               h('td', null, shortRepoLabel(c.repoName)),
               h('td', null, c.title),
+              h('td', null, renderDiffStats(c, { compact: true }) || h('span', { className: 'dsh-cj-muted' }, '—')),
               h('td', null, c.authorName),
               h('td', null,
                 c.webUrl
@@ -2725,7 +2815,7 @@ window.__ModuleLoader__.load({
         const gridEnd = new Date(toDay); gridEnd.setDate(toDay.getDate() + endPad)
         const totalDays = Math.round((gridEnd - gridStart) / 86400000) + 1
         const weeks = Math.ceil(totalDays / 7)
-        const countByDay = new Map((data.days || []).map((d) => [d.date, d.count]))
+        const dayByKey = new Map((data.days || []).map((d) => [d.date, d]))
         const step = Math.max(1, Math.ceil((data.stats.maxDayCount || 1) / 4))
         const now = new Date()
         const todayKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')
@@ -2735,10 +2825,20 @@ window.__ModuleLoader__.load({
           const d = new Date(gridStart); d.setDate(gridStart.getDate() + i)
           const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
           const inRange = d >= fromDay && d <= toDay
-          const count = inRange ? (countByDay.get(key) || 0) : 0
+          const dayInfo = inRange ? dayByKey.get(key) : null
+          const count = dayInfo ? (dayInfo.count || 0) : 0
           const level = count <= 0 ? 0 : Math.min(4, Math.ceil(count / step))
           if (inRange && count > 0) weekdayCounts[(d.getDay() + 6) % 7] += count
-          cells.push({ key, count, inRange, level, isToday: key === todayKey })
+          cells.push({
+            key,
+            count,
+            inRange,
+            level,
+            isToday: key === todayKey,
+            additions: dayInfo && dayInfo.additions != null ? dayInfo.additions : null,
+            deletions: dayInfo && dayInfo.deletions != null ? dayInfo.deletions : null,
+            filesChanged: dayInfo && dayInfo.filesChanged != null ? dayInfo.filesChanged : null
+          })
         }
         // Sparse month labels like the desktop reference (avoid crowding near the end)
         const monthLabels = []
@@ -2756,7 +2856,7 @@ window.__ModuleLoader__.load({
         let currentStreak = 0
         for (let cur = new Date(Math.min(toDay.getTime(), Date.now())); cur >= fromDay; cur.setDate(cur.getDate() - 1)) {
           const key = cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0') + '-' + String(cur.getDate()).padStart(2, '0')
-          if ((countByDay.get(key) || 0) > 0) currentStreak++
+          if ((dayByKey.get(key) || {}).count > 0) currentStreak++
           else break
         }
         const avg = data.stats.activeDays
@@ -2834,6 +2934,22 @@ window.__ModuleLoader__.load({
             h('div', { className: 'l' }, t('maxDay')),
             h('div', { className: 'v' }, stats.maxDayCount, h('small', null, t('unitCommit'))),
             h('div', { className: 'n' }, stats.maxDayDate || t('notePeak'))
+          ),
+          h('div', { className: 'dsh-cj-stat' },
+            h('div', { className: 'l' }, t('diffTotal')),
+            h('div', { className: 'v v-diff' },
+              stats.commitsWithStats
+                ? renderDiffStats({
+                    additions: stats.totalAdditions || 0,
+                    deletions: stats.totalDeletions || 0
+                  }, { files: false, compact: true })
+                : h('span', { className: 'dsh-cj-muted' }, '—')
+            ),
+            h('div', { className: 'n' },
+              stats.commitsWithStats
+                ? fillMsg(t('noteDiff'), { n: stats.commitsWithStats })
+                : t('noteDiffEmpty')
+            )
           )
         ),
         heatmap && h('div', { className: 'dsh-cj-heat' },
@@ -2862,7 +2978,11 @@ window.__ModuleLoader__.load({
               },
                 heatmap.cells.map((c) => {
                   const clickable = c.inRange && c.count > 0
-                  const tip = c.inRange ? (c.key + ' · ' + c.count + ' ' + t('unitCommit')) : c.key
+                  let tip = c.inRange ? (c.key + ' · ' + c.count + ' ' + t('unitCommit')) : c.key
+                  if (clickable && (c.additions != null || c.deletions != null)) {
+                    tip += ' · +' + (c.additions || 0) + ' −' + (c.deletions || 0)
+                    if (c.filesChanged != null) tip += ' · ' + c.filesChanged + ' files'
+                  }
                   return h('button', {
                     key: c.key,
                     type: 'button',
@@ -2921,6 +3041,17 @@ window.__ModuleLoader__.load({
               h('div', null,
                 h('span', null, t('maxDay')),
                 h('strong', null, data.stats.maxDayCount)
+              ),
+              h('div', null,
+                h('span', null, t('diffTotal')),
+                h('strong', null,
+                  stats.commitsWithStats
+                    ? renderDiffStats({
+                        additions: stats.totalAdditions || 0,
+                        deletions: stats.totalDeletions || 0
+                      }, { files: false, compact: true })
+                    : '—'
+                )
               )
             )
           )
@@ -2956,6 +3087,7 @@ window.__ModuleLoader__.load({
                       h('div', { className: 'dsh-cj-commit-title' }, c.title),
                       h('div', { className: 'dsh-cj-commit-meta' },
                         h('span', { className: 'dsh-cj-commit-sha' }, c.sha),
+                        renderDiffStats(c, { compact: true }),
                         h('span', null, c.authorName || ''),
                         c.webUrl
                           ? h(Btn, {

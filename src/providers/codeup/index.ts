@@ -1,4 +1,5 @@
 import type { Account, RepoRef } from '../../core/types.js'
+import { truncateErr, withRateLimitRetry } from '../rateLimit.js'
 import type {
   BranchInfo,
   ListCommitsOptions,
@@ -46,6 +47,7 @@ async function request<T>(
   })
   if (!res.ok) {
     const body = await res.text().catch(() => '')
+    const brief = body.length > 200 ? `${body.slice(0, 200)}…` : body
     if (options?.soft) {
       throw new Error(
         `${res.status} ${body.includes('no permission') ? 'Forbidden' : res.statusText}`
@@ -55,10 +57,10 @@ async function request<T>(
       throw new Error(
         `令牌无 API 权限（403）。请到云效「个人设置 → 个人访问令牌」删除后重建，` +
           `代码管理里至少将「代码仓库」「提交」设为只读；并确认账号选的是中心版还是 Region 版。` +
-          ` 原始信息: ${body || res.statusText}`
+          ` 原始信息: ${brief || res.statusText}`
       )
     }
-    throw new Error(`Codeup API ${res.status}: ${body || res.statusText}`)
+    throw new Error(`Codeup API ${res.status}: ${brief || res.statusText}`)
   }
   const data = (await res.json()) as T
   return { data, headers: res.headers }
@@ -166,6 +168,88 @@ function asRows(data: any): any[] {
   if (Array.isArray(data?.result)) return data.result
   if (Array.isArray(data?.list)) return data.list
   return []
+}
+
+function unwrapCommit(data: any): any {
+  if (!data || typeof data !== 'object') return data
+  if (data.result && typeof data.result === 'object' && !Array.isArray(data.result)) {
+    return data.result
+  }
+  return data
+}
+
+// 兼容 camelCase / snake_case；列表常缺 stats
+function parseCommitStats(raw: any): {
+  additions?: number
+  deletions?: number
+} {
+  const stats = raw?.stats || raw?.commitStats || raw?.commit_stats
+  if (!stats || typeof stats !== 'object') return {}
+  const addRaw = stats.additions ?? stats.addition ?? stats.Additions
+  const delRaw = stats.deletions ?? stats.deletion ?? stats.Deletions
+  const additions =
+    addRaw != null && Number.isFinite(Number(addRaw)) ? Number(addRaw) : undefined
+  const deletions =
+    delRaw != null && Number.isFinite(Number(delRaw)) ? Number(delRaw) : undefined
+  return {
+    ...(additions != null ? { additions } : {}),
+    ...(deletions != null ? { deletions } : {})
+  }
+}
+
+const STATS_CONCURRENCY = 4
+
+/**
+ * Codeup 列表不带 stats；仅用 GetCommit 的 stats（不拉 /diff，避免整份 patch）
+ */
+export async function enrichCodeupCommitStats(
+  account: Account,
+  token: string,
+  repoId: string,
+  commits: Array<{
+    sha: string
+    additions?: number
+    deletions?: number
+    filesChanged?: number
+  }>,
+  onWarn?: (message: string) => void
+): Promise<void> {
+  const pending = commits.filter((c) => c.additions == null && c.deletions == null)
+  if (!pending.length) return
+
+  let next = 0
+  const workers = Array.from({ length: Math.min(STATS_CONCURRENCY, pending.length) }, async () => {
+    while (next < pending.length) {
+      const idx = next++
+      const c = pending[idx]
+      try {
+        const { data } = await withRateLimitRetry(
+          () =>
+            request<any>(
+              account,
+              token,
+              `/repositories/${repoId}/commits/${encodeURIComponent(c.sha)}`
+            ),
+          {
+            onRetry: (waitMs) =>
+              onWarn?.(`Codeup 限流，${c.sha.slice(0, 8)} 将在 ${waitMs}ms 后重试`)
+          }
+        )
+        const detail = unwrapCommit(data)
+        const fromDetail = parseCommitStats(detail)
+        if (fromDetail.additions != null) c.additions = fromDetail.additions
+        if (fromDetail.deletions != null) c.deletions = fromDetail.deletions
+        if (c.additions == null && c.deletions == null) {
+          onWarn?.(`Codeup 提交 ${c.sha.slice(0, 8)} 详情无 stats，未能补全增删行`)
+        }
+      } catch (e: any) {
+        onWarn?.(
+          `Codeup 提交 ${c.sha.slice(0, 8)} stats 拉取失败: ${truncateErr(e?.message || e)}`
+        )
+      }
+    }
+  })
+  await Promise.all(workers)
 }
 
 /**
@@ -284,6 +368,7 @@ export const codeupProvider: VcsProvider = {
           const committedDate = String(item.committedDate || item.authoredDate || '')
           const ms = Date.parse(committedDate)
           if (Number.isFinite(ms) && ms < windowOldestMs) windowOldestMs = ms
+          const { additions, deletions } = parseCommitStats(item)
           all.push({
             sha: id,
             shortId: String(item.shortId || id.slice(0, 8)),
@@ -293,7 +378,8 @@ export const codeupProvider: VcsProvider = {
             authorEmail: String(item.authorEmail || ''),
             authoredAt: String(item.authoredDate || committedDate || ''),
             committedAt: committedDate,
-            webUrl: String(item.webUrl || '')
+            webUrl: String(item.webUrl || ''),
+            ...(additions != null || deletions != null ? { additions, deletions } : {})
           })
         }
 

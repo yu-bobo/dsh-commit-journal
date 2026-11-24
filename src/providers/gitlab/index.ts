@@ -73,6 +73,15 @@ function mapCommit(item: any): RemoteCommit {
   const message = String(item.message || '')
   const title = String(item.title || message.split('\n').find((l) => l.trim()) || '')
   const committedAt = String(item.committed_date || item.authored_date || '')
+  const stats = item.stats
+  const additions =
+    stats && stats.additions != null && Number.isFinite(Number(stats.additions))
+      ? Number(stats.additions)
+      : undefined
+  const deletions =
+    stats && stats.deletions != null && Number.isFinite(Number(stats.deletions))
+      ? Number(stats.deletions)
+      : undefined
   return {
     sha: id,
     shortId: String(item.short_id || id.slice(0, 8)),
@@ -82,7 +91,8 @@ function mapCommit(item: any): RemoteCommit {
     authorEmail: String(item.author_email || ''),
     authoredAt: String(item.authored_date || committedAt || ''),
     committedAt,
-    webUrl: String(item.web_url || '')
+    webUrl: String(item.web_url || ''),
+    ...(additions != null || deletions != null ? { additions, deletions } : {})
   }
 }
 
@@ -206,7 +216,8 @@ export const gitlabProvider: VcsProvider = {
           ref_name: opts.ref,
           since: opts.since,
           page,
-          per_page: COMMIT_PER_PAGE
+          per_page: COMMIT_PER_PAGE,
+          with_stats: true
         }
       )
       pages++

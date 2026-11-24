@@ -59,7 +59,8 @@ function buildTemplateMarkdown(opts: {
       commitCount: opts.kept.length,
       rawCommitCount: opts.rawCount,
       excluded: opts.excluded,
-      statutoryWorkdays: opts.statutoryWorkdays
+      statutoryWorkdays: opts.statutoryWorkdays,
+      commits: opts.kept
     })
   )
   lines.push('## 工作摘要（草稿）')

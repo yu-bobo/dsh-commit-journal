@@ -79,6 +79,10 @@ export interface StoredCommit {
   committedAt: string
   webUrl: string
   syncedAt: string
+  // 变更汇总；同步时写入，旧数据可缺
+  additions?: number
+  deletions?: number
+  filesChanged?: number
 }
 
 export interface SyncState {
@@ -141,6 +145,10 @@ export interface ReportResult {
 export interface ActivityDay {
   date: string
   count: number
+  // 当日有 stats 的提交合计；全无则省略
+  additions?: number
+  deletions?: number
+  filesChanged?: number
 }
 
 export interface ActivityStats {
@@ -149,6 +157,11 @@ export interface ActivityStats {
   longestStreak: number
   maxDayCount: number
   maxDayDate: string | null
+  // 区间内增删行合计（仅统计有值的提交）
+  totalAdditions: number
+  totalDeletions: number
+  totalFilesChanged: number
+  commitsWithStats: number
 }
 
 export interface ActivityData {

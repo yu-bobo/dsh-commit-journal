@@ -118,8 +118,8 @@ feat(smart-patrol): H5 今日任务对接分页并触底无限加载
 | `upsert_account` / `remove_account` | 创建、更新、删除；`mode=local` 时填 `localRoots`，无需 token |
 | `sync_commits` | 增量同步（remote API 或 local `git log`） |
 | `list_repos` | 仓库列表；`refresh` 时 remote 拉 API / local 重扫 |
-| `query_commits` | 按日期 / 仓库 / 关键词查本地提交 |
-| `get_period_report` | 日 / 周 / 月 / 自定义区间 Markdown（默认排除 merge、按仓库分组；可选 `groupBy=ticket`；周/月含出勤对照；可落盘） |
+| `query_commits` | 按日期 / 仓库 / 关键词查本地提交（含增删行汇总字段，旧数据可缺） |
+| `get_period_report` | 日 / 周 / 月 / 自定义区间 Markdown（默认排除 merge、按仓库分组；可选 `groupBy=ticket`；周/月含出勤对照；页头/条目含 `+/−` 汇总；可落盘） |
 | `get_activity_heatmap` | 热力统计；传 `date` 可取单日明细 |
 | `update_journal_settings` | 同步间隔、回溯、导出目录、报告过滤与默认 `reportGroupBy` 等 |
 
@@ -175,6 +175,7 @@ feat(smart-patrol): H5 今日任务对接分页并触底无限加载
 - [x] GitHub / GitHub Enterprise — 已接入并实测（含公司代理 TLS）
 - [x] 报告通用底座（merge 过滤、按仓库/按日、法定工作日出勤对照）
 - [x] 报告可选增强（conventional 解析 / `groupBy=ticket`）
+- [x] 变更汇总（增删行 / 可得时的文件数；不存路径；同步写入，并每轮最多回填 100 条缺 stats 历史）
 
 ## License
 

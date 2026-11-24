@@ -1,5 +1,6 @@
 import type { Account, RepoRef } from '../../core/types.js'
 import { vcsFetch } from '../fetch.js'
+import { truncateErr, withRateLimitRetry } from '../rateLimit.js'
 import type {
   BranchInfo,
   ListCommitsOptions,
@@ -81,13 +82,14 @@ async function request<T>(
   })
   if (!res.ok) {
     const body = await res.text().catch(() => '')
+    const brief = body.length > 200 ? `${body.slice(0, 200)}…` : body
     if (res.status === 401 || res.status === 403) {
       throw new Error(
         `GitHub 令牌无效或权限不足（${res.status}）。请确认 PAT 至少具备 repo（私有仓）或 public_repo 只读权限。` +
-          ` 原始信息: ${body || res.statusText}`
+          ` 原始信息: ${brief || res.statusText}`
       )
     }
-    throw new Error(`GitHub API ${res.status}: ${body || res.statusText}`)
+    throw new Error(`GitHub API ${res.status}: ${brief || res.statusText}`)
   }
   const data = (await res.json()) as T
   return { data, headers: res.headers, status: res.status }
@@ -133,6 +135,20 @@ function mapCommit(item: any): RemoteCommit {
   const committer = commit.committer || {}
   const authoredAt = String(author.date || committer.date || '')
   const committedAt = String(committer.date || author.date || '')
+  const stats = item.stats
+  const additions =
+    stats && stats.additions != null && Number.isFinite(Number(stats.additions))
+      ? Number(stats.additions)
+      : undefined
+  const deletions =
+    stats && stats.deletions != null && Number.isFinite(Number(stats.deletions))
+      ? Number(stats.deletions)
+      : undefined
+  // GitHub 详情 files 最多 300；满额视为截断，不写 filesChanged 以免少计
+  const filesChanged =
+    Array.isArray(item.files) && item.files.length > 0 && item.files.length < 300
+      ? item.files.length
+      : undefined
   return {
     sha,
     shortId: sha.slice(0, 8),
@@ -142,8 +158,62 @@ function mapCommit(item: any): RemoteCommit {
     authorEmail: String(author.email || ''),
     authoredAt,
     committedAt,
-    webUrl: String(item.html_url || '')
+    webUrl: String(item.html_url || ''),
+    ...(additions != null || deletions != null ? { additions, deletions } : {}),
+    ...(filesChanged != null ? { filesChanged } : {})
   }
+}
+
+const STATS_CONCURRENCY = 4
+
+/**
+ * 为缺 stats 的提交限并发拉取详情（列表接口不含增删行）
+ */
+export async function enrichGithubCommitStats(
+  account: Account,
+  token: string,
+  repoId: string,
+  commits: Array<{
+    sha: string
+    additions?: number
+    deletions?: number
+    filesChanged?: number
+  }>,
+  onWarn?: (message: string) => void
+): Promise<void> {
+  const pending = commits.filter((c) => c.additions == null && c.deletions == null)
+  if (!pending.length) return
+
+  let next = 0
+  const workers = Array.from({ length: Math.min(STATS_CONCURRENCY, pending.length) }, async () => {
+    while (next < pending.length) {
+      const idx = next++
+      const c = pending[idx]
+      try {
+        const { data } = await withRateLimitRetry(
+          () =>
+            request<any>(
+              account,
+              token,
+              `/repos/${repoId}/commits/${encodeURIComponent(c.sha)}`
+            ),
+          {
+            onRetry: (waitMs) =>
+              onWarn?.(`GitHub 限流，${c.sha.slice(0, 8)} 将在 ${waitMs}ms 后重试`)
+          }
+        )
+        const mapped = mapCommit(data)
+        if (mapped.additions != null) c.additions = mapped.additions
+        if (mapped.deletions != null) c.deletions = mapped.deletions
+        if (mapped.filesChanged != null) c.filesChanged = mapped.filesChanged
+      } catch (e: any) {
+        onWarn?.(
+          `GitHub 提交 ${c.sha.slice(0, 8)} stats 拉取失败: ${truncateErr(e?.message || e)}`
+        )
+      }
+    }
+  })
+  await Promise.all(workers)
 }
 
 async function paginateRepos(

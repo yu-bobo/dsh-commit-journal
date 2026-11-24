@@ -10,6 +10,10 @@ export interface RemoteCommit {
   authoredAt: string
   committedAt: string
   webUrl: string
+  // 变更汇总；拿不到则省略
+  additions?: number
+  deletions?: number
+  filesChanged?: number
 }
 
 export interface BranchInfo {
