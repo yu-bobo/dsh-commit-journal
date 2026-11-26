@@ -1,6 +1,7 @@
 /**
  * Commit Journal browser UI: horizontal tabs, DSH dual-theme tokens.
  * Account switching lives on the Accounts tab (no global top bar).
+ * Settings sits as a trailing icon and opens a modal (same shell as New account).
  */
 window.__ModuleLoader__.load({
   id: 'dsh-commit-journal',
@@ -18,6 +19,7 @@ window.__ModuleLoader__.load({
     const UiTag = ui && ui.Tag
     const UiMenu = ui && ui.Menu
     const UiToast = ui && ui.Toast
+    const UiTooltip = ui && ui.Tooltip
     const IconPlus = ui && ui.IconPlusOutlineRegular
     const IconRefresh = ui && ui.IconRefreshOutlineRegular
     const IconEdit = ui && ui.IconEditOutlineRegular
@@ -32,6 +34,11 @@ window.__ModuleLoader__.load({
     const IconDownload = ui && ui.IconDownloadOutlineRegular
     const IconGlobe = ui && ui.IconGlobeOutlineRegular
     const IconLink = ui && (ui.IconRightUpOutlineRegular || ui.IconLinkOutlineRegular)
+    const IconSettings = ui && (
+      ui.IconSettingOutlineRegular ||
+      ui.IconSettingsOutlineRegular ||
+      ui.IconGearOutlineRegular
+    )
     const UiSeg = ui && ui.SegmentedControl
 
     const PANEL_ID = 'commit-journal'
@@ -42,8 +49,7 @@ window.__ModuleLoader__.load({
       { id: 'repos', zh: '仓库', en: 'Repos' },
       { id: 'commits', zh: '提交', en: 'Commits' },
       { id: 'activity', zh: '活跃', en: 'Activity' },
-      { id: 'logs', zh: '日志', en: 'Logs' },
-      { id: 'settings', zh: '设置', en: 'Settings' }
+      { id: 'logs', zh: '日志', en: 'Logs' }
     ]
 
     const DICTIONARIES = {
@@ -141,9 +147,12 @@ window.__ModuleLoader__.load({
         levelError: 'Error',
         message: 'Message',
         syncInterval: 'Sync interval (min)',
+        syncIntervalHint: 'Applies to every account (remote API or local rescan).',
         lookback: 'Lookback days',
+        lookbackHint:
+          'Used on first sync, after reset, and once after you raise the window (backfills that range).\nOtherwise sync stays incremental from the last run.',
         exportsPath: 'Exports folder',
-        exportsPathHint: 'Markdown dumps from sync / period reports. Empty = ~/.dsh-commit-journal/exports',
+        exportsPathHint: 'Markdown from sync / period reports.\nLeave empty for ~/.dsh-commit-journal/exports',
         recentYear: 'Past year',
         totalCommits: 'Commits',
         activeDays: 'Active days',
@@ -206,10 +215,7 @@ window.__ModuleLoader__.load({
           'Rescan discovers git repos under your roots. Watch the ones to index; sync runs git log into the local cache.',
         descCommits: 'Browse locally synced commits; filter by repo, date range, and keyword.',
         descActivity: 'Contribution heatmap for the selected range.',
-        descLogs: 'Sync log for the current account; error rows show which repo failed.',
-        descSettings:
-          'Scheduled sync applies to every account (remote API or local rescan). Lookback days apply on first sync, after reset, and once after you raise the window; otherwise sync is incremental.',
-        syncSettingsTitle: 'Sync'
+        descLogs: 'Sync log for the current account; error rows show which repo failed.'
       },
       zh: {
         panelLabel: '提交日志',
@@ -305,9 +311,12 @@ window.__ModuleLoader__.load({
         levelError: '错误',
         message: '内容',
         syncInterval: '同步间隔（分钟）',
+        syncIntervalHint: '对所有账号生效（远程拉 API 或本地重扫）。',
         lookback: '回溯天数',
+        lookbackHint:
+          '用于首次同步、重置记录后，以及调大该值后的下一次同步（按新窗口回填一次）。\n其余时间按上次同步时间增量拉取。',
         exportsPath: '导出目录',
-        exportsPathHint: '同步按日落盘与周期报告 Markdown 的目录；留空默认 ~/.dsh-commit-journal/exports',
+        exportsPathHint: '同步按日落盘与周期报告的 Markdown 目录。\n留空默认 ~/.dsh-commit-journal/exports',
         recentYear: '近一年',
         totalCommits: '提交总数',
         activeDays: '活跃天数',
@@ -370,10 +379,7 @@ window.__ModuleLoader__.load({
           '「重新扫描」按根目录发现本机 git 仓；勾选关注后同步会执行 git log 写入本地缓存。',
         descCommits: '查询本地已同步的提交记录；可按仓库、日期与关键词筛选。',
         descActivity: '近一年 / 指定年份的提交活跃度。',
-        descLogs: '当前账号同步记录；错误行可查看具体仓库失败原因。',
-        descSettings:
-          '定时同步对所有账号生效（远程拉 API 或本地重扫）。回溯天数用于首次同步、重置记录后，以及调大该值后的下一次同步（会按新窗口回填一次历史）；其余时间按上次同步时间增量拉取。',
-        syncSettingsTitle: '同步'
+        descLogs: '当前账号同步记录；错误行可查看具体仓库失败原因。'
       }
     }
 
@@ -424,6 +430,7 @@ window.__ModuleLoader__.load({
       .dsh-cj-tabs {
         display: flex;
         gap: 4px;
+        align-items: stretch;
         padding: calc(var(--dsh-frame-top-clearance, 0px) + 12px) 20px 0;
         border-bottom: 1px solid var(--dsh-cj-border);
         flex-shrink: 0;
@@ -444,6 +451,73 @@ window.__ModuleLoader__.load({
         color: var(--dsw-alias-label-primary);
         border-bottom-color: var(--dsw-alias-brand-primary);
         font-weight: 600;
+      }
+      .dsh-cj-tabs-trail {
+        margin-left: auto;
+        display: flex;
+        align-items: stretch;
+      }
+      .dsh-cj-tab-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 12px;
+        line-height: 0;
+      }
+      .dsh-cj-tab-icon svg { display: block; }
+      .dsh-cj-label-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 0;
+      }
+      .dsh-cj-hint-btn {
+        appearance: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--dsw-alias-label-tertiary, var(--dsw-alias-label-secondary));
+        cursor: help;
+        line-height: 0;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .dsh-cj-hint-btn:hover,
+      .dsh-cj-hint-btn:focus-visible,
+      .dsh-cj-tooltip-anchor:hover .dsh-cj-hint-btn,
+      .dsh-cj-tooltip-anchor:focus-within .dsh-cj-hint-btn {
+        color: var(--dsw-alias-label-secondary);
+        outline: none;
+      }
+      .dsh-cj-hint-btn svg {
+        display: block;
+        width: 15px;
+        height: 15px;
+        overflow: visible;
+      }
+      .dsh-cj-tooltip {
+        position: fixed;
+        /* 需高于 UiModal / Toast 遮罩层，否则 portal 到 body 后会被盖住 */
+        z-index: 10050;
+        width: max-content;
+        max-width: min(260px, calc(100vw - 24px));
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary, #000) 8%, transparent);
+        background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1, #fff));
+        color: var(--dsw-alias-label-primary);
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 1.45;
+        white-space: pre-line;
+        text-align: left;
+        box-shadow: 0 2px 10px color-mix(in srgb, #000 8%, transparent);
+        pointer-events: none;
       }
       .dsh-cj-body {
         flex: 1;
@@ -483,6 +557,14 @@ window.__ModuleLoader__.load({
       }
       .dsh-cj-row-end { justify-content: space-between; }
       .dsh-cj-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+      .dsh-cj-modal-footer-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        justify-content: flex-end;
+        width: 100%;
+      }
       .dsh-cj-table .dsh-cj-actions {
         flex-wrap: nowrap;
         gap: 6px;
@@ -1962,9 +2044,9 @@ window.__ModuleLoader__.load({
         )
       )
 
-      const footer = h(React.Fragment, null,
-        h(Btn, { icon: IconClose ? h(IconClose) : null, onClick: onClose }, t('cancel')),
-        h(Btn, { primary: true, disabled: busy, icon: IconSave ? h(IconSave) : null, onClick: onSave }, t('save'))
+      const footer = h('div', { className: 'dsh-cj-modal-footer-actions' },
+        h(Btn, { onClick: onClose }, t('cancel')),
+        h(Btn, { primary: true, disabled: busy, onClick: onSave }, t('save'))
       )
 
       if (UiModal) {
@@ -1984,7 +2066,7 @@ window.__ModuleLoader__.load({
         h('div', { className: 'dsh-cj-modal dsh-cj-modal-wide', onClick: (e) => e.stopPropagation() },
           h('h3', null, title),
           body,
-          h('div', { className: 'dsh-cj-actions' }, footer)
+          footer
         )
       )
     }
@@ -2005,6 +2087,20 @@ window.__ModuleLoader__.load({
         h('rect', { x: 5, y: 9, width: 3, height: 3, rx: 0.5, opacity: 0.35 }),
         h('rect', { x: 9, y: 9, width: 3, height: 3, rx: 0.5, opacity: 1 }),
         h('rect', { x: 13, y: 9, width: 2, height: 3, rx: 0.5, opacity: 0.55 })
+      )
+    }
+
+    /**
+     * 设置齿轮图标（无官方 Icon 时的兜底）
+     */
+    function SettingsGlyph(props) {
+      if (IconSettings) return h(IconSettings, props)
+      return h('svg', {
+        width: 16, height: 16, viewBox: '0 0 16 16', fill: 'currentColor', 'aria-hidden': true, ...props
+      },
+        h('path', {
+          d: 'M8.7 1.2a.8.8 0 0 0-1.4 0l-.3 1a5 5 0 0 0-1.2.7l-1-.4a.8.8 0 0 0-1 .9l.2 1.1a5 5 0 0 0-.7 1.2l-1.1.2a.8.8 0 0 0 0 1.5l1.1.3c.1.4.3.8.6 1.2l-.4 1a.8.8 0 0 0 .9 1.1l1.1-.2c.4.3.8.5 1.2.6l.2 1.1a.8.8 0 0 0 1.5 0l.3-1.1c.4-.1.8-.3 1.2-.6l1 .2a.8.8 0 0 0 1-1l-.3-1c.3-.4.5-.8.6-1.2l1.1-.3a.8.8 0 0 0 0-1.5l-1.1-.2a5 5 0 0 0-.7-1.2l.3-1.1a.8.8 0 0 0-1-.9l-1 .4a5 5 0 0 0-1.2-.7l-.3-1zM8 10a2 2 0 1 1 0-4 2 2 0 0 1 0 4z'
+        })
       )
     }
 
@@ -3199,7 +3295,128 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function SettingsPage({ t, busy, setBusy, notify }) {
+    /**
+     * 细线信息图标
+     */
+    function InfoGlyph() {
+      return h('svg', {
+        viewBox: '0 0 16 16',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1,
+        'aria-hidden': true
+      },
+        h('circle', { cx: 8, cy: 8, r: 5.25 }),
+        h('path', { d: 'M8 7.2v3.2', strokeLinecap: 'round' }),
+        h('circle', { cx: 8, cy: 5.4, r: 0.55, fill: 'currentColor', stroke: 'none' })
+      )
+    }
+
+    /**
+     * 轻量 Tooltip 兜底：右侧优先，portal 到 body，避免被 Modal 裁切/盖住
+     */
+    function FallbackTooltip({ content, children }) {
+      const anchorRef = useRef(null)
+      const tipRef = useRef(null)
+      const [open, setOpen] = useState(false)
+      const [tipStyle, setTipStyle] = useState(null)
+
+      useLayoutEffect(() => {
+        if (!open) {
+          setTipStyle(null)
+          return undefined
+        }
+        const place = () => {
+          const anchor = anchorRef.current
+          const tip = tipRef.current
+          if (!anchor || !tip) return
+          const a = anchor.getBoundingClientRect()
+          const tw = tip.offsetWidth
+          const th = tip.offsetHeight
+          const pad = 8
+          let left = a.right + 6
+          if (left + tw > window.innerWidth - pad) left = a.left - tw - 6
+          left = Math.max(pad, Math.min(left, window.innerWidth - tw - pad))
+          let top = a.top + (a.height - th) / 2
+          top = Math.max(pad, Math.min(top, window.innerHeight - th - pad))
+          setTipStyle({
+            left: Math.round(left) + 'px',
+            top: Math.round(top) + 'px'
+          })
+        }
+        place()
+        window.addEventListener('resize', place)
+        window.addEventListener('scroll', place, true)
+        return () => {
+          window.removeEventListener('resize', place)
+          window.removeEventListener('scroll', place, true)
+        }
+      }, [open, content])
+
+      const tipNode = open
+        ? h('div', {
+            ref: tipRef,
+            className: 'dsh-cj-tooltip',
+            role: 'tooltip',
+            style: tipStyle || { left: 0, top: 0, visibility: 'hidden' }
+          }, content)
+        : null
+
+      const tipPortal = tipNode && ReactDOM && ReactDOM.createPortal
+        ? ReactDOM.createPortal(tipNode, document.body)
+        : tipNode
+
+      return h('span', {
+        ref: anchorRef,
+        className: 'dsh-cj-tooltip-anchor',
+        style: { display: 'inline-flex', lineHeight: 0 },
+        onMouseEnter: () => setOpen(true),
+        onMouseLeave: () => setOpen(false),
+        onFocusCapture: () => setOpen(true),
+        onBlurCapture: () => setOpen(false)
+      }, children, tipPortal)
+    }
+
+    /**
+     * 字段旁信息图标 + Tooltip（优先官方 Tooltip，否则轻量兜底）
+     */
+    function FieldHintIcon({ hint }) {
+      if (!hint) return null
+
+      const trigger = h('button', {
+        type: 'button',
+        className: 'dsh-cj-hint-btn',
+        'aria-label': hint,
+        tabIndex: 0
+      }, h(InfoGlyph))
+
+      // 官方 API：label / side / portal / maxWidth（见 dshmarket CardTip）
+      if (UiTooltip) {
+        return h(UiTooltip, {
+          label: hint,
+          side: 'right',
+          portal: true,
+          maxWidth: 280
+        }, trigger)
+      }
+
+      return h(FallbackTooltip, { content: hint }, trigger)
+    }
+
+    /**
+     * 带信息图标的表单标签行
+     */
+    function FieldLabel({ children, hint }) {
+      return h('label', { className: 'dsh-cj-label dsh-cj-label-row' },
+        h('span', null, children),
+        h(FieldHintIcon, { hint })
+      )
+    }
+
+    /**
+     * 设置弹窗：与「新建账号」同一套 Modal 壳
+     */
+    function SettingsModal({ open, t, busy, setBusy, notify, onClose }) {
       const [form, setForm] = useState({
         syncIntervalMinutes: 30,
         syncLookbackDays: 90,
@@ -3207,29 +3424,43 @@ window.__ModuleLoader__.load({
       })
 
       useEffect(() => {
-        api('/api/settings').then((s) => setForm({
-          syncIntervalMinutes: s.syncIntervalMinutes,
-          syncLookbackDays: s.syncLookbackDays,
-          exportsPath: s.exportsPath || ''
-        })).catch((e) => notify(e.message || String(e), 'error'))
-      }, [notify])
+        if (!open) return undefined
+        let cancelled = false
+        api('/api/settings').then((s) => {
+          if (cancelled) return
+          setForm({
+            syncIntervalMinutes: s.syncIntervalMinutes,
+            syncLookbackDays: s.syncLookbackDays,
+            exportsPath: s.exportsPath || ''
+          })
+        }).catch((e) => {
+          if (!cancelled) notify(e.message || String(e), 'error')
+        })
+        return () => { cancelled = true }
+      }, [open, notify])
 
-      return h('div', { className: 'dsh-cj-page-scroll' },
-        h(PageHead, { desc: t('descSettings') }),
-        h('h3', {
-          className: 'dsh-cj-page-title',
-          style: { fontSize: 14, marginBottom: 10 }
-        }, t('syncSettingsTitle')),
+      const onSave = async () => {
+        setBusy(true)
+        try {
+          await api('/api/settings', { method: 'PUT', body: JSON.stringify(form) })
+          notify(t('saveOk'), 'success')
+          onClose()
+        } catch (e) { notify(e.message || String(e), 'error') }
+        finally { setBusy(false) }
+      }
+
+      const body = h('div', { className: 'dsh-cj-settings-form' },
         h('div', { className: 'dsh-cj-field' },
-          h('label', { className: 'dsh-cj-label' }, t('syncInterval')),
+          h(FieldLabel, { hint: t('syncIntervalHint') }, t('syncInterval')),
           h(FieldInput, {
             type: 'number', min: 5,
             value: form.syncIntervalMinutes,
-            onChange: (e) => setForm({ ...form, syncIntervalMinutes: Number(e.target.value) })
+            onChange: (e) => setForm({ ...form, syncIntervalMinutes: Number(e.target.value) }),
+            'data-modal-autofocus': true
           })
         ),
         h('div', { className: 'dsh-cj-field' },
-          h('label', { className: 'dsh-cj-label' }, t('lookback')),
+          h(FieldLabel, { hint: t('lookbackHint') }, t('lookback')),
           h(FieldInput, {
             type: 'number', min: 1,
             value: form.syncLookbackDays,
@@ -3237,26 +3468,38 @@ window.__ModuleLoader__.load({
           })
         ),
         h('div', { className: 'dsh-cj-field' },
-          h('label', { className: 'dsh-cj-label' }, t('exportsPath')),
+          h(FieldLabel, { hint: t('exportsPathHint') }, t('exportsPath')),
           h(FieldInput, {
             value: form.exportsPath,
             placeholder: '~/.dsh-commit-journal/exports',
             onChange: (e) => setForm({ ...form, exportsPath: e.target.value })
-          }),
-          h('div', { className: 'dsh-cj-muted' }, t('exportsPathHint'))
-        ),
-        h(Btn, {
-          primary: true, disabled: busy,
-          icon: IconSave ? h(IconSave) : null,
-          onClick: async () => {
-            setBusy(true)
-            try {
-              await api('/api/settings', { method: 'PUT', body: JSON.stringify(form) })
-              notify(t('saveOk'), 'success')
-            } catch (e) { notify(e.message || String(e), 'error') }
-            finally { setBusy(false) }
-          }
-        }, t('save'))
+          })
+        )
+      )
+
+      const footer = h('div', { className: 'dsh-cj-modal-footer-actions' },
+        h(Btn, { onClick: onClose }, t('cancel')),
+        h(Btn, { primary: true, disabled: busy, onClick: onSave }, t('save'))
+      )
+
+      if (UiModal) {
+        return h(UiModal, {
+          open: !!open,
+          onClose,
+          title: t('settings'),
+          closeLabel: t('cancel'),
+          footer,
+          backdropBlur: true
+        }, body)
+      }
+
+      if (!open) return null
+      return h('div', { className: 'dsh-cj-modal-mask', onClick: onClose },
+        h('div', { className: 'dsh-cj-modal', onClick: (e) => e.stopPropagation() },
+          h('h3', null, t('settings')),
+          body,
+          footer
+        )
       )
     }
 
@@ -3287,7 +3530,9 @@ window.__ModuleLoader__.load({
       const [busy, setBusy] = useState(false)
       const [scheme, setScheme] = useState('light')
       const [toast, setToast] = useState(null)
+      const [settingsOpen, setSettingsOpen] = useState(false)
       const toastSeq = React.useRef(0)
+      const closeSettings = useCallback(() => setSettingsOpen(false), [])
 
       const notify = useCallback((text, tone) => {
         toastSeq.current += 1
@@ -3375,10 +3620,30 @@ window.__ModuleLoader__.load({
               className: 'dsh-cj-tab',
               'data-active': tab === item.id ? '1' : '0',
               'aria-selected': tab === item.id,
-              onClick: () => setTab(item.id)
+              onClick: () => {
+                setSettingsOpen(false)
+                setTab(item.id)
+              }
             }, t(item.id))
+          ),
+          h('div', { className: 'dsh-cj-tabs-trail' },
+            h('button', {
+              type: 'button',
+              className: 'dsh-cj-tab dsh-cj-tab-icon',
+              'data-active': settingsOpen ? '1' : '0',
+              title: t('settings'),
+              'aria-label': t('settings'),
+              'aria-haspopup': 'dialog',
+              'aria-expanded': settingsOpen,
+              onClick: () => setSettingsOpen(true)
+            }, h(SettingsGlyph))
           )
         ),
+        h(SettingsModal, {
+          open: settingsOpen,
+          t, busy, setBusy, notify,
+          onClose: closeSettings
+        }),
         h('div', { className: 'dsh-cj-body' },
           tab === 'accounts' && h(AccountsPage, {
             t, accounts, activeId, busy, setBusy, notify,
@@ -3389,8 +3654,7 @@ window.__ModuleLoader__.load({
           }),
           tab === 'commits' && h(CommitsPage, { t, accountId: activeId, busy, setBusy, notify }),
           tab === 'activity' && h(ActivityPage, { t, accountId: activeId, notify }),
-          tab === 'logs' && h(LogsPage, { t, accountId: activeId, busy, setBusy, notify }),
-          tab === 'settings' && h(SettingsPage, { t, busy, setBusy, notify })
+          tab === 'logs' && h(LogsPage, { t, accountId: activeId, busy, setBusy, notify })
         )
       )
     }
