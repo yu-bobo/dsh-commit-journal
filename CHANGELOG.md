@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0
+
+- Achievements: 20 commit-based badges with bronze/silver/gold tiers (UI x2/x3/x4); unlocks persist in `achievements.json`
+- Achievements: added Midnight Oil / One-Liner / Fixer / Shipper / Repo Loyalist / Yearbook / Ticket Tracker / Scope Smith / Refactor Ranger
+- Activity achievements modal: 4-column badge grid; click opens detail overlay
+- Docs: achievement rules live in `docs/ACHIEVEMENTS.md` (not README); keep in sync with `src/core/achievements.ts`
+- Activity panel: achievements entry chip opens a modal (no separate tab); badge PNGs under `assets/achievements/`
+- API / Agent: `GET /api/achievements`, tool `get_achievements`; recompute after sync; clear unlocks on account delete
+
 ## 0.6.0
 
 - Sync: store per-commit diff stats (`additions` / `deletions` / optional `filesChanged`); no file path list; no bulk backfill of old rows

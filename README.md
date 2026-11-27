@@ -8,6 +8,7 @@ DeepSeek Harness (`dsh`) 插件：按账号选择 **远程拉取**（Codeup / Gi
 | 多账号 | 本机加密存放 PAT（仅 remote）；local 只存根路径 |
 | 增量同步 | 按关注仓库 / 作者过滤；定时任务两种模式共用 |
 | 面板 | 账号 · 仓库 · 提交 · 活跃 · 日志 · 设置 |
+| 成就 | 按提交自动解锁徽章（x2/x3/x4 档）；在「活跃」页点成就入口弹窗查看 |
 | Provider | **remote：Codeup / GitLab（含自建） / GitHub（含 GHE）**；**local：本机 git** |
 
 侧栏打开「提交日志」即可使用。
@@ -17,6 +18,8 @@ DeepSeek Harness (`dsh`) 插件：按账号选择 **远程拉取**（Codeup / Gi
 ![账号面板](assets/screenshot-accounts.png)
 
 ![活跃热力图](assets/screenshot-activity.png)
+
+![成就弹窗](assets/screenshot-achievements.png)
 
 ## 安装
 
@@ -121,6 +124,7 @@ feat(smart-patrol): H5 今日任务对接分页并触底无限加载
 | `query_commits` | 按日期 / 仓库 / 关键词查本地提交（含增删行汇总字段，旧数据可缺） |
 | `get_period_report` | 日 / 周 / 月 / 自定义区间 Markdown（默认排除 merge、按仓库分组；可选 `groupBy=ticket`；周/月含出勤对照；页头/条目含 `+/−` 汇总；可落盘） |
 | `get_activity_heatmap` | 热力统计；传 `date` 可取单日明细 |
+| `get_achievements` | 成就列表（进度、档位、解锁时间） |
 | `update_journal_settings` | 同步间隔、回溯、导出目录、报告过滤与默认 `reportGroupBy` 等 |
 
 ## 可直接对 Agent 说的提示词

@@ -6,6 +6,7 @@ import { commitFullText } from './commitText.js'
 import { formatCommitDiffStats } from './commitStats.js'
 import { shortRepoPath } from './repoDisplay.js'
 import { getAccount, getAccountToken, listAccounts } from './accounts.js'
+import { evaluateAchievements } from './achievements.js'
 import { db } from './db.js'
 import { exportsDir } from './paths.js'
 import { getSyncIntervalMinutes, getSyncLookbackDays } from './settings.js'
@@ -288,6 +289,12 @@ export async function syncAccount(
         `${truncated ? `，${truncated} 个仓库触及分页上限` : ''}` +
         `${errors.length ? `，失败 ${errors.length}` : ''}`
     })
+
+    try {
+      evaluateAchievements(accountId)
+    } catch {
+      // 成就评估失败不阻断同步
+    }
 
     return { accountId, fetched, inserted, errors, truncated }
   } catch (e: any) {

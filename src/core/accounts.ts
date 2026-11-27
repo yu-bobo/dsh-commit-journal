@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid'
 import type { Account, AccountInput, AccountMode, AccountUpdate } from './types.js'
 import { accountsPath } from './paths.js'
 import { deleteToken, loadToken, saveToken } from './vault.js'
+import { achievementStore } from './achievementStore.js'
 import { db } from './db.js'
 
 interface Store {
@@ -264,6 +265,7 @@ export function deleteAccount(id: string): void {
   saveStore(store)
   deleteToken(id)
   db.deleteAccountData(id)
+  achievementStore.deleteAccountUnlocks(id)
 }
 
 export function getAccountToken(id: string): string {

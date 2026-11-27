@@ -1,4 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'http'
+import { existsSync, readFileSync } from 'fs'
+import { dirname, join } from 'path'
+import { fileURLToPath } from 'url'
 import {
   createAccount,
   deleteAccount,
@@ -9,12 +12,26 @@ import {
   setActiveAccountId,
   updateAccount
 } from '../core/accounts.js'
+import { evaluateAchievements } from '../core/achievements.js'
 import { db } from '../core/db.js'
 import { shortRepoPath } from '../core/repoDisplay.js'
 import { describeSettings, getUiPort, updateSettings } from '../core/settings.js'
 import { getDataRoot } from '../core/paths.js'
 import { syncAccount } from '../core/sync.js'
 import { getProvider } from '../providers/index.js'
+
+// 打包后在 lib/index.js；开发拆文件时可能在 lib/ui/server.js
+function resolvePackageRoot(): string {
+  const here = dirname(fileURLToPath(import.meta.url))
+  const candidates = [join(here, '..'), join(here, '../..')]
+  for (const root of candidates) {
+    if (existsSync(join(root, 'assets', 'achievements'))) return root
+    if (existsSync(join(root, 'package.json'))) return root
+  }
+  return join(here, '..')
+}
+
+const PACKAGE_ROOT = resolvePackageRoot()
 
 let server: Server | null = null
 let listenPort: number | null = null
@@ -34,6 +51,20 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
     ...corsHeaders()
   })
   res.end(raw)
+}
+
+function sendPng(
+  res: ServerResponse,
+  status: number,
+  buf: Buffer,
+  cacheControl = 'public, max-age=86400'
+): void {
+  res.writeHead(status, {
+    'Content-Type': 'image/png',
+    'Cache-Control': cacheControl,
+    ...corsHeaders()
+  })
+  res.end(buf)
 }
 
 function readBody(req: IncomingMessage): Promise<string> {
@@ -354,6 +385,30 @@ async function handler(req: IncomingMessage, res: ServerResponse): Promise<void>
       if (!accountId) return sendJson(res, 400, { error: 'accountId required' })
       const cleared = db.clearCommits(accountId, body.repoId ? String(body.repoId) : undefined)
       sendJson(res, 200, cleared)
+      return
+    }
+
+    // --- achievements ---
+    if (method === 'GET' && url.pathname === '/api/achievements') {
+      const accountId = url.searchParams.get('accountId') || getActiveAccountId() || ''
+      if (!accountId) return sendJson(res, 400, { error: 'accountId required' })
+      sendJson(res, 200, {
+        accountId,
+        achievements: evaluateAchievements(accountId)
+      })
+      return
+    }
+
+    // 成就徽章静态图：assets/achievements/{id}.png
+    if (method === 'GET' && url.pathname.startsWith('/assets/achievements/')) {
+      const name = url.pathname.slice('/assets/achievements/'.length)
+      if (!/^[a-z0-9-]+\.png$/i.test(name)) {
+        return sendJson(res, 400, { error: 'invalid asset name' })
+      }
+      const file = join(PACKAGE_ROOT, 'assets', 'achievements', name)
+      if (!existsSync(file)) return sendJson(res, 404, { error: 'not found' })
+      // 成就图常替换，避免面板长时间吃旧缓存
+      sendPng(res, 200, readFileSync(file), 'no-cache')
       return
     }
 

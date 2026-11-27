@@ -45,6 +45,10 @@ export function dbPath(): string {
   return join(getDataRoot(), 'data.json')
 }
 
+export function achievementsPath(): string {
+  return join(getDataRoot(), 'achievements.json')
+}
+
 export function holidayCacheDir(): string {
   const dir = join(getDataRoot(), 'holiday-cache')
   mkdirSync(dir, { recursive: true })

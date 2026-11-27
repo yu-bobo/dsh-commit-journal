@@ -192,3 +192,33 @@ export const DEFAULT_SYNC_LOOKBACK_DAYS = 90
 export const DEFAULT_UI_PORT = 39282
 export const DEFAULT_REPORT_EXCLUDE_MERGE = true
 export const DEFAULT_REPORT_GROUP_BY: ReportGroupBy = 'repo'
+
+// 成就档位：single 仅用于无分级徽章
+export type AchievementTier = 'bronze' | 'silver' | 'gold' | 'single'
+
+export interface AchievementUnlock {
+  accountId: string
+  achievementId: string
+  tier: AchievementTier
+  unlockedAt: string
+}
+
+export interface AchievementTierView {
+  tier: AchievementTier
+  threshold: number
+  unlocked: boolean
+  unlockedAt?: string
+}
+
+export interface AchievementView {
+  id: string
+  nameZh: string
+  nameEn: string
+  descriptionZh: string
+  descriptionEn: string
+  // 对应 assets/achievements/{id}.png
+  icon: string
+  tiers: AchievementTierView[]
+  current: number
+  highestTier: AchievementTier | null
+}

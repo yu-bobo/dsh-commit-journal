@@ -9,6 +9,7 @@ import {
 } from '../core/accounts.js'
 import { db } from '../core/db.js'
 import { describeSettings, updateSettings } from '../core/settings.js'
+import { evaluateAchievements } from '../core/achievements.js'
 import { generateReport } from '../core/reports.js'
 import { syncAccount } from '../core/sync.js'
 import { getDataRoot } from '../core/paths.js'
@@ -433,6 +434,38 @@ export function registerTools(ctx: Context): void {
         }
         const data = db.getActivity(id, args.year)
         return textOut(JSON.stringify({ accountId: id, ...data }, null, 2))
+      }
+    })
+  )
+
+  ctx.tools.register(
+    defineTool({
+      name: 'get_achievements',
+      description:
+        '获取 Commit Journal 成就列表（含进度、已解锁档位与解锁时间）。基于本地提交缓存评估，按账号隔离。',
+      parameters: {
+        accountId: { type: 'string', description: '账号 id；省略则用当前活跃账号' }
+      },
+      output: {
+        schema: { type: 'string' },
+        render: (_a, v) => [{ type: 'text', text: String(v) }]
+      },
+      async execute(args: { accountId?: string }) {
+        const id = resolveAccountId(args.accountId)
+        const achievements = evaluateAchievements(id)
+        const unlocked = achievements.filter((a) => a.highestTier)
+        return textOut(
+          JSON.stringify(
+            {
+              accountId: id,
+              unlockedCount: unlocked.length,
+              total: achievements.length,
+              achievements
+            },
+            null,
+            2
+          )
+        )
       }
     })
   )

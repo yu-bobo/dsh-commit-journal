@@ -215,7 +215,20 @@ window.__ModuleLoader__.load({
           'Rescan discovers git repos under your roots. Watch the ones to index; sync runs git log into the local cache.',
         descCommits: 'Browse locally synced commits; filter by repo, date range, and keyword.',
         descActivity: 'Contribution heatmap for the selected range.',
-        descLogs: 'Sync log for the current account; error rows show which repo failed.'
+        descLogs: 'Sync log for the current account; error rows show which repo failed.',
+        close: 'Close',
+        achievements: 'Achievements',
+        achievementsHint: 'View commit achievements',
+        achievementsEmpty: 'No achievement data yet. Sync commits first.',
+        achievementsProgress: '{cur} / {next}',
+        achievementsUnlockedAt: 'Unlocked {at}',
+        achievementsLocked: 'Locked',
+        achievementsTierBronze: 'Bronze',
+        achievementsTierSilver: 'Silver',
+        achievementsTierGold: 'Gold',
+        achievementsSummary: '{n} / {total} unlocked',
+        achievementsTiers: 'Tiers',
+        achievementsThreshold: 'Need {n}'
       },
       zh: {
         panelLabel: '提交日志',
@@ -379,7 +392,20 @@ window.__ModuleLoader__.load({
           '「重新扫描」按根目录发现本机 git 仓；勾选关注后同步会执行 git log 写入本地缓存。',
         descCommits: '查询本地已同步的提交记录；可按仓库、日期与关键词筛选。',
         descActivity: '近一年 / 指定年份的提交活跃度。',
-        descLogs: '当前账号同步记录；错误行可查看具体仓库失败原因。'
+        descLogs: '当前账号同步记录；错误行可查看具体仓库失败原因。',
+        close: '关闭',
+        achievements: '成就',
+        achievementsHint: '查看提交成就',
+        achievementsEmpty: '暂无成就数据，请先同步提交。',
+        achievementsProgress: '{cur} / {next}',
+        achievementsUnlockedAt: '解锁于 {at}',
+        achievementsLocked: '未解锁',
+        achievementsTierBronze: '铜',
+        achievementsTierSilver: '银',
+        achievementsTierGold: '金',
+        achievementsSummary: '已解锁 {n} / {total}',
+        achievementsTiers: '档位',
+        achievementsThreshold: '需达到 {n}'
       }
     }
 
@@ -996,6 +1022,12 @@ window.__ModuleLoader__.load({
       .dsh-cj-modal-wide {
         width: min(680px, 100%);
       }
+      .dsh-cj-achievements-modal {
+        overflow: hidden;
+      }
+      .dsh-cj-achievements-modal .dsh-cj-achievements-body {
+        max-height: min(68vh, 620px);
+      }
       .dsh-cj-modal h3 { margin: 0 0 12px; font-size: 15px; }
       .dsh-cj-stats {
         display: grid;
@@ -1075,6 +1107,354 @@ window.__ModuleLoader__.load({
         line-height: 16px;
         color: var(--dsw-alias-label-secondary);
         min-height: 16px;
+      }
+      .dsh-cj-achievements-entry {
+        appearance: none;
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      .dsh-cj-achievements-entry:hover {
+        filter: brightness(1.08);
+      }
+      .dsh-cj-achievements-entry-img {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #111;
+        display: block;
+      }
+      .dsh-cj-achievements-entry-count {
+        position: absolute;
+        right: -4px;
+        bottom: -3px;
+        min-width: 16px;
+        height: 16px;
+        padding: 0 4px;
+        border-radius: 999px;
+        background: var(--dsw-alias-brand-primary, #3b82f6);
+        color: #fff;
+        font-size: 10px;
+        line-height: 16px;
+        font-variant-numeric: tabular-nums;
+        text-align: center;
+        box-shadow: 0 0 0 2px var(--dsw-alias-bg-layer-1, #fff);
+      }
+      .dsh-cj-achievements-body {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-height: min(68vh, 620px);
+        min-height: 280px;
+      }
+      .dsh-cj-achievements-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
+        padding: 2px 4px 2px 2px;
+        scrollbar-gutter: stable;
+      }
+      .dsh-cj-achievements-grid::-webkit-scrollbar {
+        width: 6px;
+      }
+      .dsh-cj-achievements-grid::-webkit-scrollbar-thumb {
+        background: color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);
+        border-radius: 999px;
+      }
+      .dsh-cj-achievement-card {
+        appearance: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 10px;
+        border: 1px solid var(--dsh-cj-border);
+        border-radius: 12px;
+        background: var(--dsw-alias-bg-layer-1);
+        cursor: pointer;
+        text-align: center;
+        color: inherit;
+      }
+      .dsh-cj-achievement-card[data-locked="1"]:hover {
+        border-color: var(--dsh-cj-border);
+      }
+      .dsh-cj-achievement-card[data-locked="0"][data-tier="bronze"]:hover {
+        border-color: #d08b5a;
+      }
+      .dsh-cj-achievement-card[data-locked="0"][data-tier="silver"]:hover {
+        border-color: #a8b0b8;
+      }
+      .dsh-cj-achievement-card[data-locked="0"][data-tier="gold"]:hover,
+      .dsh-cj-achievement-card[data-locked="0"][data-tier="single"]:hover {
+        border-color: #efc14a;
+      }
+      .dsh-cj-achievement-card[data-locked="1"] .dsh-cj-achievement-badge {
+        filter: grayscale(1) opacity(0.45);
+      }
+      .dsh-cj-achievement-badge-wrap {
+        position: relative;
+        width: 92px;
+        height: 92px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+      }
+      .dsh-cj-achievement-badge-wrap[data-tier="bronze"] {
+        background: radial-gradient(circle at 35% 30%, #ffe0cc 0%, #d08b5a 55%, #8a4f2a 100%);
+        box-shadow: 0 0 0 1px color-mix(in srgb, #8a4f2a 35%, transparent),
+          0 6px 14px color-mix(in srgb, #8a4f2a 28%, transparent);
+      }
+      .dsh-cj-achievement-badge-wrap[data-tier="silver"] {
+        background: radial-gradient(circle at 35% 30%, #ffffff 0%, #c9d0d6 55%, #7d8790 100%);
+        box-shadow: 0 0 0 1px color-mix(in srgb, #7d8790 35%, transparent),
+          0 6px 14px color-mix(in srgb, #7d8790 22%, transparent);
+      }
+      .dsh-cj-achievement-badge-wrap[data-tier="gold"],
+      .dsh-cj-achievement-badge-wrap[data-tier="single"] {
+        background: radial-gradient(circle at 35% 30%, #fff6c2 0%, #efc14a 55%, #b8860b 100%);
+        box-shadow: 0 0 0 1px color-mix(in srgb, #b8860b 35%, transparent),
+          0 6px 16px color-mix(in srgb, #efc14a 30%, transparent);
+      }
+      .dsh-cj-achievement-badge {
+        width: 84px;
+        height: 84px;
+        object-fit: contain;
+        border-radius: 50%;
+      }
+      .dsh-cj-achievement-badge-ph {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 84px;
+        height: 84px;
+        border-radius: 50%;
+        background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--dsw-alias-label-secondary);
+      }
+      .dsh-cj-achievement-mult {
+        margin-top: 2px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+      }
+      .dsh-cj-achievement-mult[data-tier="bronze"] { color: #c47a45; }
+      .dsh-cj-achievement-mult[data-tier="silver"] { color: #8a949c; }
+      .dsh-cj-achievement-mult[data-tier="gold"],
+      .dsh-cj-achievement-mult[data-tier="single"] { color: #c9a227; }
+      .dsh-cj-achievement-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--dsw-alias-label-primary);
+      }
+      .dsh-cj-achievement-tier-dots {
+        display: inline-flex;
+        gap: 3px;
+        align-items: center;
+        height: 8px;
+      }
+      .dsh-cj-achievement-tier-dots i {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);
+      }
+      .dsh-cj-achievement-tier-dots i[data-on="1"][data-tier="bronze"] { background: #d08b5a; }
+      .dsh-cj-achievement-tier-dots i[data-on="1"][data-tier="silver"] { background: #a8b0b8; }
+      .dsh-cj-achievement-tier-dots i[data-on="1"][data-tier="gold"] { background: #efc14a; }
+      .dsh-cj-achievement-tier-dots i[data-on="1"][data-tier="single"] { background: #efc14a; }
+      .dsh-cj-achievement-progress {
+        width: 100%;
+        height: 4px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
+        overflow: hidden;
+      }
+      .dsh-cj-achievement-progress > span {
+        display: block;
+        height: 100%;
+        background: var(--dsw-alias-brand-primary);
+      }
+      .dsh-cj-achievement-meta {
+        font-size: 11px;
+        color: var(--dsw-alias-label-secondary);
+        font-variant-numeric: tabular-nums;
+      }
+      .dsh-cj-achievement-detail-mask {
+        position: fixed;
+        inset: 0;
+        z-index: 10060;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: color-mix(in srgb, #000 48%, transparent);
+      }
+      .dsh-cj-achievement-detail-panel {
+        width: min(440px, 100%);
+        max-height: min(86vh, 720px);
+        overflow: auto;
+        padding: 20px 20px 18px;
+        border-radius: 16px;
+        border: 1px solid var(--dsh-cj-border);
+        background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1, #fff));
+        box-shadow: 0 18px 48px color-mix(in srgb, #000 28%, transparent);
+        text-align: center;
+      }
+      .dsh-cj-achievement-detail-badge-wrap {
+        width: 220px;
+        height: 220px;
+        margin: 4px auto 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+      }
+      .dsh-cj-achievement-detail-badge-wrap[data-tier="bronze"] {
+        background: radial-gradient(circle at 35% 30%, #ffe0cc 0%, #d08b5a 55%, #8a4f2a 100%);
+        box-shadow: 0 10px 28px color-mix(in srgb, #8a4f2a 30%, transparent);
+      }
+      .dsh-cj-achievement-detail-badge-wrap[data-tier="silver"] {
+        background: radial-gradient(circle at 35% 30%, #ffffff 0%, #c9d0d6 55%, #7d8790 100%);
+        box-shadow: 0 10px 28px color-mix(in srgb, #7d8790 24%, transparent);
+      }
+      .dsh-cj-achievement-detail-badge-wrap[data-tier="gold"],
+      .dsh-cj-achievement-detail-badge-wrap[data-tier="single"] {
+        background: radial-gradient(circle at 35% 30%, #fff6c2 0%, #efc14a 55%, #b8860b 100%);
+        box-shadow: 0 10px 28px color-mix(in srgb, #efc14a 32%, transparent);
+      }
+      .dsh-cj-achievement-detail-badge {
+        width: 204px;
+        height: 204px;
+        object-fit: contain;
+        border-radius: 50%;
+      }
+      .dsh-cj-achievement-detail-badge-ph {
+        width: 204px;
+        height: 204px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 64px;
+        font-weight: 700;
+        background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);
+        color: var(--dsw-alias-label-secondary);
+      }
+      .dsh-cj-achievement-detail-panel[data-locked="1"] .dsh-cj-achievement-detail-badge {
+        filter: grayscale(1) opacity(0.5);
+      }
+      .dsh-cj-achievement-detail-title {
+        margin: 0 0 4px;
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--dsw-alias-label-primary);
+      }
+      .dsh-cj-achievement-detail-sub {
+        margin: 0 0 10px;
+        font-size: 13px;
+        color: var(--dsw-alias-label-secondary);
+      }
+      .dsh-cj-achievement-detail-desc {
+        margin: 0 0 14px;
+        font-size: 13px;
+        line-height: 1.55;
+        color: var(--dsw-alias-label-secondary);
+      }
+      .dsh-cj-achievement-detail-meta {
+        margin: 0 0 8px;
+        font-size: 12px;
+        color: var(--dsw-alias-label-secondary);
+        font-variant-numeric: tabular-nums;
+      }
+      .dsh-cj-achievement-detail-tiers {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0;
+        margin: 16px 0 0;
+        padding-top: 14px;
+        border-top: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);
+        position: relative;
+      }
+      .dsh-cj-achievement-detail-tiers::before {
+        content: '';
+        position: absolute;
+        top: 28px;
+        left: 16.66%;
+        right: 16.66%;
+        height: 2px;
+        background: color-mix(in srgb, var(--dsw-alias-label-primary) 12%, transparent);
+        z-index: 0;
+      }
+      .dsh-cj-achievement-detail-tier {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 0 4px;
+        border: 0;
+        background: transparent;
+      }
+      .dsh-cj-achievement-detail-tier-dot {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        color: #5c5346;
+        background: color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
+        box-shadow: 0 0 0 3px var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1, #fff));
+      }
+      .dsh-cj-achievement-detail-tier[data-unlocked="1"][data-tier="bronze"] .dsh-cj-achievement-detail-tier-dot {
+        background: linear-gradient(145deg, #ffd2b3, #d08b5a);
+        color: #5a3218;
+      }
+      .dsh-cj-achievement-detail-tier[data-unlocked="1"][data-tier="silver"] .dsh-cj-achievement-detail-tier-dot {
+        background: linear-gradient(145deg, #ffffff, #b8c0c8);
+        color: #4a545c;
+      }
+      .dsh-cj-achievement-detail-tier[data-unlocked="1"][data-tier="gold"] .dsh-cj-achievement-detail-tier-dot {
+        background: linear-gradient(145deg, #ffe9a0, #efc14a);
+        color: #6a5208;
+      }
+      .dsh-cj-achievement-detail-tier[data-unlocked="0"] .dsh-cj-achievement-detail-tier-dot {
+        opacity: 0.45;
+      }
+      .dsh-cj-achievement-detail-tier-need {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--dsw-alias-label-primary);
+        font-variant-numeric: tabular-nums;
+      }
+      .dsh-cj-achievement-detail-tier-time {
+        font-size: 10px;
+        line-height: 1.3;
+        color: var(--dsw-alias-label-secondary);
+        font-variant-numeric: tabular-nums;
+        min-height: 13px;
       }
       .dsh-cj-heat {
         background: var(--dsw-alias-bg-layer-1);
@@ -2851,6 +3231,278 @@ window.__ModuleLoader__.load({
       return (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日 周' + wd
     }
 
+    function formatUnlockAt(iso) {
+      if (!iso) return '—'
+      const d = new Date(iso)
+      if (Number.isNaN(d.getTime())) return String(iso)
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const hh = String(d.getHours()).padStart(2, '0')
+      const mm = String(d.getMinutes()).padStart(2, '0')
+      return y + '-' + m + '-' + day + ' ' + hh + ':' + mm
+    }
+
+    function formatUnlockDate(iso) {
+      if (!iso) return ''
+      const d = new Date(iso)
+      if (Number.isNaN(d.getTime())) return ''
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return y + '-' + m + '-' + day
+    }
+
+    // 换图时递增，避免 Electron/WebView 仍命中旧图
+    const ACHIEVEMENT_ASSET_VER = '20261127-3'
+
+    function achievementBadgeUrl(id) {
+      return (
+        API +
+        '/assets/achievements/' +
+        encodeURIComponent(id) +
+        '.png?v=' +
+        ACHIEVEMENT_ASSET_VER
+      )
+    }
+
+    function nextTierThreshold(item) {
+      if (!item || !item.tiers || !item.tiers.length) return null
+      for (const tier of item.tiers) {
+        if (!tier.unlocked) return tier
+      }
+      return item.tiers[item.tiers.length - 1]
+    }
+
+    // GitHub 成就档位标记：铜 x2 / 银 x3 / 金 x4
+    function tierMultiplier(tier) {
+      if (tier === 'bronze') return 'x2'
+      if (tier === 'silver') return 'x3'
+      if (tier === 'gold') return 'x4'
+      return ''
+    }
+
+    function tierRank(tier) {
+      if (tier === 'bronze') return 1
+      if (tier === 'silver') return 2
+      if (tier === 'gold') return 3
+      if (tier === 'single') return 1
+      return 0
+    }
+
+    /**
+     * 成就详情浮层：大图 + 介绍 + 档位
+     */
+    function AchievementDetailOverlay({ item, t, broken, onBroken, onClose }) {
+      if (!item) return null
+      const locked = !item.highestTier
+      const next = nextTierThreshold(item)
+      const progressTarget = next ? next.threshold : (item.tiers[item.tiers.length - 1] || {}).threshold || 1
+      const mult = tierMultiplier(item.highestTier)
+      const panel = h('div', {
+        className: 'dsh-cj-achievement-detail-panel',
+        'data-locked': locked ? '1' : '0',
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-label': item.nameZh || item.nameEn,
+        onClick: (e) => e.stopPropagation()
+      },
+        h('div', {
+          className: 'dsh-cj-achievement-detail-badge-wrap',
+          'data-tier': item.highestTier || undefined
+        },
+          broken
+            ? h('div', { className: 'dsh-cj-achievement-detail-badge-ph' }, (item.nameEn || item.id).slice(0, 1))
+            : h('img', {
+                className: 'dsh-cj-achievement-detail-badge',
+                src: achievementBadgeUrl(item.icon || item.id),
+                alt: item.nameEn || item.id,
+                onError: onBroken
+              })
+        ),
+        h('h3', { className: 'dsh-cj-achievement-detail-title' },
+          item.nameZh || item.nameEn,
+          mult ? h('span', {
+            className: 'dsh-cj-achievement-mult',
+            'data-tier': item.highestTier,
+            style: { marginLeft: 8, fontSize: 14 }
+          }, mult) : null
+        ),
+        h('p', { className: 'dsh-cj-achievement-detail-sub' }, item.nameEn),
+        h('p', { className: 'dsh-cj-achievement-detail-desc' }, item.descriptionZh || item.descriptionEn),
+        h('p', { className: 'dsh-cj-achievement-detail-meta' },
+          fillMsg(t('achievementsProgress'), { cur: item.current, next: progressTarget }),
+          item.highestTier
+            ? ' · ' + fillMsg(t('achievementsUnlockedAt'), {
+                at: formatUnlockAt(
+                  (item.tiers.find((x) => x.tier === item.highestTier) || {}).unlockedAt
+                )
+              })
+            : ' · ' + t('achievementsLocked')
+        ),
+        item.tiers && item.tiers.length > 1 && h('div', { className: 'dsh-cj-achievement-detail-tiers' },
+          item.tiers.map((tier) =>
+            h('div', {
+              key: tier.tier,
+              className: 'dsh-cj-achievement-detail-tier',
+              'data-tier': tier.tier,
+              'data-unlocked': tier.unlocked ? '1' : '0'
+            },
+              h('span', { className: 'dsh-cj-achievement-detail-tier-dot' },
+                tierMultiplier(tier.tier) || '✓'
+              ),
+              h('span', { className: 'dsh-cj-achievement-detail-tier-need' }, String(tier.threshold)),
+              h('span', { className: 'dsh-cj-achievement-detail-tier-time' },
+                tier.unlocked ? formatUnlockDate(tier.unlockedAt) : '—'
+              )
+            )
+          )
+        )
+      )
+
+      const node = h('div', {
+        className: 'dsh-cj-achievement-detail-mask',
+        onClick: onClose
+      }, panel)
+
+      if (ReactDOM && ReactDOM.createPortal) {
+        return ReactDOM.createPortal(node, document.body)
+      }
+      return node
+    }
+
+    /**
+     * 成就弹窗：网格展示徽章与进度
+     */
+    function AchievementsModal({ open, t, accountId, notify, onClose }) {
+      const [items, setItems] = useState([])
+      const [loading, setLoading] = useState(false)
+      const [detailId, setDetailId] = useState(null)
+      const [broken, setBroken] = useState({})
+
+      useEffect(() => {
+        if (!open || !accountId) return undefined
+        let cancelled = false
+        setLoading(true)
+        setDetailId(null)
+        api('/api/achievements?accountId=' + encodeURIComponent(accountId))
+          .then((d) => {
+            if (cancelled) return
+            setItems(d.achievements || [])
+          })
+          .catch((e) => {
+            if (!cancelled) notify(e.message || String(e), 'error')
+          })
+          .finally(() => {
+            if (!cancelled) setLoading(false)
+          })
+        return () => { cancelled = true }
+      }, [open, accountId, notify])
+
+      const detail = items.find((x) => x.id === detailId) || null
+      const unlockedCount = items.filter((x) => x.highestTier).length
+      const body = h('div', { className: 'dsh-cj-achievements-body' },
+        loading
+          ? h('p', { className: 'dsh-cj-muted' }, '…')
+          : !items.length
+            ? h('p', { className: 'dsh-cj-muted' }, t('achievementsEmpty'))
+            : h(React.Fragment, null,
+                h('p', { className: 'dsh-cj-muted', style: { margin: 0, flexShrink: 0 } },
+                  fillMsg(t('achievementsSummary'), { n: unlockedCount, total: items.length })
+                ),
+                h('div', { className: 'dsh-cj-achievements-grid' },
+                  items.map((item) => {
+                    const locked = !item.highestTier
+                    const next = nextTierThreshold(item)
+                    const progressTarget = next ? next.threshold : (item.tiers[item.tiers.length - 1] || {}).threshold || 1
+                    const pct = Math.max(0, Math.min(100, Math.round((item.current / progressTarget) * 100)))
+                    const mult = tierMultiplier(item.highestTier)
+                    const rank = tierRank(item.highestTier)
+                    const maxRank = item.tiers && item.tiers.some((x) => x.tier === 'gold') ? 3 : (item.tiers && item.tiers.length > 1 ? item.tiers.length : 0)
+                    return h('button', {
+                      key: item.id,
+                      type: 'button',
+                      className: 'dsh-cj-achievement-card',
+                      'data-locked': locked ? '1' : '0',
+                      'data-tier': item.highestTier || undefined,
+                      onClick: () => setDetailId(item.id)
+                    },
+                      h('div', {
+                        className: 'dsh-cj-achievement-badge-wrap',
+                        'data-tier': item.highestTier || undefined
+                      },
+                        broken[item.id]
+                          ? h('div', { className: 'dsh-cj-achievement-badge-ph' }, (item.nameEn || item.id).slice(0, 1))
+                          : h('img', {
+                              className: 'dsh-cj-achievement-badge',
+                              src: achievementBadgeUrl(item.icon || item.id),
+                              alt: item.nameEn || item.id,
+                              onError: () => setBroken((prev) => ({ ...prev, [item.id]: true }))
+                            })
+                      ),
+                      h('div', { className: 'dsh-cj-achievement-name' }, item.nameZh || item.nameEn),
+                      mult
+                        ? h('div', { className: 'dsh-cj-achievement-mult', 'data-tier': item.highestTier }, mult)
+                        : (maxRank > 0
+                          ? h('div', { className: 'dsh-cj-achievement-tier-dots', 'aria-hidden': true },
+                              [1, 2, 3].slice(0, maxRank).map((n) =>
+                                h('i', { key: n, 'data-on': rank >= n ? '1' : '0', 'data-tier': item.highestTier || 'bronze' })
+                              )
+                            )
+                          : h('div', { className: 'dsh-cj-achievement-mult', style: { visibility: 'hidden' } }, 'x0')),
+                      h('div', { className: 'dsh-cj-achievement-progress' },
+                        h('span', { style: { width: pct + '%' } })
+                      ),
+                      h('div', { className: 'dsh-cj-achievement-meta' },
+                        fillMsg(t('achievementsProgress'), {
+                          cur: item.current,
+                          next: progressTarget
+                        })
+                      )
+                    )
+                  })
+                )
+              )
+      )
+
+      const detailOverlay = detail && h(AchievementDetailOverlay, {
+        item: detail,
+        t,
+        broken: !!broken[detail.id],
+        onBroken: () => setBroken((prev) => ({ ...prev, [detail.id]: true })),
+        onClose: () => setDetailId(null)
+      })
+
+      if (UiModal) {
+        return h(React.Fragment, null,
+          h(UiModal, {
+            open: !!open,
+            onClose,
+            title: t('achievements'),
+            closeLabel: t('close'),
+            backdropBlur: true,
+            className: 'dsh-cj-modal-wide dsh-cj-achievements-modal'
+          }, body),
+          detailOverlay
+        )
+      }
+
+      if (!open) return null
+      return h(React.Fragment, null,
+        h('div', { className: 'dsh-cj-modal-mask', onClick: onClose },
+          h('div', {
+            className: 'dsh-cj-modal dsh-cj-modal-wide dsh-cj-achievements-modal',
+            style: { overflow: 'hidden' },
+            onClick: (e) => e.stopPropagation()
+          },
+            h('h3', null, t('achievements')),
+            body
+          )
+        ),
+        detailOverlay
+      )
+    }
+
     function ActivityPage({ t, accountId, notify }) {
       const [year, setYear] = useState(0)
       const [years, setYears] = useState([])
@@ -2858,6 +3510,10 @@ window.__ModuleLoader__.load({
       const [day, setDay] = useState(null)
       const [dayItems, setDayItems] = useState([])
       const [dayLoading, setDayLoading] = useState(false)
+      const [showAchievements, setShowAchievements] = useState(false)
+      const [achUnlocked, setAchUnlocked] = useState(0)
+      const [achTotal, setAchTotal] = useState(0)
+      const [entryBroken, setEntryBroken] = useState(false)
       const weekLabels = ['一', '二', '三', '四', '五', '六', '日']
       const dayReq = React.useRef(0)
 
@@ -2867,6 +3523,10 @@ window.__ModuleLoader__.load({
         setYears([])
         setDay(null)
         setDayItems([])
+        setShowAchievements(false)
+        setAchUnlocked(0)
+        setAchTotal(0)
+        setEntryBroken(false)
       }, [accountId])
 
       useEffect(() => {
@@ -2882,6 +3542,25 @@ window.__ModuleLoader__.load({
           })
           .catch((e) => notify(e.message || String(e), 'error'))
       }, [accountId, year, notify])
+
+      useEffect(() => {
+        if (!accountId) return undefined
+        let cancelled = false
+        api('/api/achievements?accountId=' + encodeURIComponent(accountId))
+          .then((d) => {
+            if (cancelled) return
+            const list = d.achievements || []
+            setAchTotal(list.length)
+            setAchUnlocked(list.filter((x) => x.highestTier).length)
+          })
+          .catch(() => {
+            if (!cancelled) {
+              setAchTotal(0)
+              setAchUnlocked(0)
+            }
+          })
+        return () => { cancelled = true }
+      }, [accountId, showAchievements])
 
       const openDay = async (date) => {
         const reqId = ++dayReq.current
@@ -2962,6 +3641,41 @@ window.__ModuleLoader__.load({
         return { weeks, cells, monthLabels, weekdayCounts, wdMax, currentStreak, avg }
       }, [data])
 
+      const achievementsEntry = accountId && h('button', {
+        type: 'button',
+        className: 'dsh-cj-achievements-entry',
+        title: t('achievementsHint'),
+        'aria-label': t('achievements'),
+        onClick: () => setShowAchievements(true)
+      },
+        entryBroken
+          ? h('span', { className: 'dsh-cj-achievement-badge-ph', style: { width: 32, height: 32, fontSize: 14 } }, 'A')
+          : h('img', {
+              className: 'dsh-cj-achievements-entry-img',
+              src: achievementBadgeUrl('first-blood'),
+              alt: '',
+              onError: () => setEntryBroken(true)
+            }),
+        achUnlocked > 0 && h('span', { className: 'dsh-cj-achievements-entry-count' }, String(achUnlocked))
+      )
+
+      const yearSelect = h(SelectField, {
+        value: year,
+        'aria-label': t('recentYear'),
+        options: [{ value: 0, label: t('recentYear') }].concat(
+          years.map((y) => ({ value: y, label: y + ' 年' }))
+        ),
+        onChange: (v) => { setData(null); setYear(Number(v)) }
+      })
+
+      const achievementsModal = h(AchievementsModal, {
+        open: showAchievements,
+        t,
+        accountId,
+        notify,
+        onClose: () => setShowAchievements(false)
+      })
+
       if (!accountId) {
         return h('div', { className: 'dsh-cj-page-scroll' },
           h(PageHead, { desc: t('descActivity') }),
@@ -2971,25 +3685,21 @@ window.__ModuleLoader__.load({
       if (!data) {
         return h('div', { className: 'dsh-cj-page-scroll' },
           h(PageHead, { desc: t('descActivity') }),
-          h('p', { className: 'dsh-cj-muted' }, '…')
+          h('div', { className: 'dsh-cj-row dsh-cj-row-end' }, achievementsEntry),
+          h('p', { className: 'dsh-cj-muted' }, '…'),
+          achievementsModal
         )
       }
       if (!data.stats.totalCommits) {
         return h('div', { className: 'dsh-cj-page-scroll' },
           h(PageHead, { desc: t('descActivity') }),
           h('div', { className: 'dsh-cj-row dsh-cj-row-end' },
-            h('span'),
-            h(SelectField, {
-              value: year,
-              'aria-label': t('recentYear'),
-              options: [{ value: 0, label: t('recentYear') }].concat(
-                years.map((y) => ({ value: y, label: y + ' 年' }))
-              ),
-              onChange: (v) => { setData(null); setYear(Number(v)) }
-            })
+            achievementsEntry,
+            yearSelect
           ),
           h('p', { className: 'dsh-cj-muted' }, t('noData')),
-          h('p', { className: 'dsh-cj-footnote' }, t('activityFootnote'))
+          h('p', { className: 'dsh-cj-footnote' }, t('activityFootnote')),
+          achievementsModal
         )
       }
 
@@ -3000,15 +3710,9 @@ window.__ModuleLoader__.load({
         //   desc: (year ? (year + ' 年提交活跃度') : t('descActivity')) + ' · ' + data.from + ' ~ ' + data.to
         // }),
         h('div', { className: 'dsh-cj-row dsh-cj-row-end' },
-          h('span', { className: 'dsh-cj-muted' }, t('heatHint')),
-          h(SelectField, {
-            value: year,
-            'aria-label': t('recentYear'),
-            options: [{ value: 0, label: t('recentYear') }].concat(
-              years.map((y) => ({ value: y, label: y + ' 年' }))
-            ),
-            onChange: (v) => { setData(null); setYear(Number(v)) }
-          })
+          h('span', { className: 'dsh-cj-muted', style: { marginRight: 'auto' } }, t('heatHint')),
+          achievementsEntry,
+          yearSelect
         ),
         h('div', { className: 'dsh-cj-stats' },
           h('div', { className: 'dsh-cj-stat' },
@@ -3198,7 +3902,8 @@ window.__ModuleLoader__.load({
                   )
                 : h('p', { className: 'dsh-cj-muted' }, t('dayEmpty')))
           )
-        )
+        ),
+        achievementsModal
       )
     }
 
